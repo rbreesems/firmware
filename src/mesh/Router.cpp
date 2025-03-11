@@ -381,10 +381,12 @@ bool perhapsDecode(meshtastic_MeshPacket *p)
                 // we have to copy into a scratch buffer, because these bytes are a union with the decoded protobuf. Create a
                 // fresh copy for each decrypt attempt.
                 memcpy(bytes, p->encrypted.bytes, rawSize);
+
+                //printBytes("encypted recieved",  p->encrypted.bytes, rawSize);
                 // Try to decrypt the packet if we can
                 crypto->decrypt(p->from, p->id, rawSize, bytes);
 
-                // printBytes("plaintext", bytes, p->encrypted.size);
+                //printBytes("plaintext recieved", bytes, p->encrypted.size);
 
                 // Take those raw bytes and convert them back into a well structured protobuf we can understand
                 memset(&p->decoded, 0, sizeof(p->decoded));
@@ -497,7 +499,7 @@ meshtastic_Routing_Error perhapsEncode(meshtastic_MeshPacket *p)
         if (numbytes + MESHTASTIC_HEADER_LENGTH > MAX_LORA_PAYLOAD_LEN)
             return meshtastic_Routing_Error_TOO_LARGE;
 
-        // printBytes("plaintext", bytes, numbytes);
+        //printBytes("plaintext to encrypt", bytes, numbytes);
 
         ChannelIndex chIndex = p->channel; // keep as a local because we are about to change it
 
@@ -548,6 +550,7 @@ meshtastic_Routing_Error perhapsEncode(meshtastic_MeshPacket *p)
             }
             crypto->encryptPacket(getFrom(p), p->id, numbytes, bytes);
             memcpy(p->encrypted.bytes, bytes, numbytes);
+            //printBytes("ciphertext", bytes, numbytes);
         }
 #else
         if (p->pki_encrypted == true) {

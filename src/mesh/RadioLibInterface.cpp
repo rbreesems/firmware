@@ -408,6 +408,8 @@ void RadioLibInterface::handleReceiveInterrupt()
 #endif
 
     int state = iface->readData((uint8_t *)&radioBuffer, length);
+    //printBytes("Raw incoming packet: ", (uint8_t *)&radioBuffer, length);
+
 #if ARCH_PORTDUINO
     if (settingsMap[logoutputlevel] == level_trace) {
         printBytes("Raw incoming packet: ", (uint8_t *)&radioBuffer, length);
@@ -433,6 +435,13 @@ void RadioLibInterface::handleReceiveInterrupt()
             // altered packet with "from == 0" can do Remote Node Administration without permission
             if (radioBuffer.header.from == 0) {
                 LOG_WARN("Ignore received packet without sender");
+                airTime->logAirtime(RX_ALL_LOG, xmitMsec);
+                return;
+            }
+
+            if (radioBuffer.header.magicnum != PACKET_HEADER_MAGIC_NUMBER) {
+                LOG_INFO("Dropping received packet for magic number mismatch");
+                airTime->logAirtime(RX_ALL_LOG, xmitMsec);
                 return;
             }
 
@@ -446,14 +455,19 @@ void RadioLibInterface::handleReceiveInterrupt()
             mp->to = radioBuffer.header.to;
             mp->id = radioBuffer.header.id;
             mp->channel = radioBuffer.header.channel;
-            assert(HOP_MAX <= PACKET_FLAGS_HOP_LIMIT_MASK); // If hopmax changes, carefully check this code
-            mp->hop_limit = radioBuffer.header.flags & PACKET_FLAGS_HOP_LIMIT_MASK;
-            mp->hop_start = (radioBuffer.header.flags & PACKET_FLAGS_HOP_START_MASK) >> PACKET_FLAGS_HOP_START_SHIFT;
+            //assert(HOP_MAX <= PACKET_FLAGS_HOP_LIMIT_MASK); // If hopmax changes, carefully check this code
+            //mp->hop_limit = radioBuffer.header.flags & PACKET_FLAGS_HOP_LIMIT_MASK;
+            mp->hop_limit = radioBuffer.header.hop_limit & PACKET_FLAGS_HOP_LIMIT_MASK ;
+            mp->hop_start = radioBuffer.header.hop_start & PACKET_FLAGS_HOP_START_MASK ;
             mp->want_ack = !!(radioBuffer.header.flags & PACKET_FLAGS_WANT_ACK_MASK);
             mp->via_mqtt = !!(radioBuffer.header.flags & PACKET_FLAGS_VIA_MQTT_MASK);
             // If hop_start is not set, next_hop and relay_node are invalid (firmware <2.3)
             mp->next_hop = mp->hop_start == 0 ? NO_NEXT_HOP_PREFERENCE : radioBuffer.header.next_hop;
             mp->relay_node = mp->hop_start == 0 ? NO_RELAY_NODE : radioBuffer.header.relay_node;
+
+            
+
+            LOG_DEBUG("RX packet: from=0x%08x,to=0x%08x,id=0x%08x,Ch=0x%x, HopStart=%d, HopLim=%d", mp->from, mp->to, mp->id, mp->channel, mp->hop_start, mp->hop_limit);
 
             addReceiveMetadata(mp);
 
@@ -463,7 +477,9 @@ void RadioLibInterface::handleReceiveInterrupt()
             memcpy(mp->encrypted.bytes, radioBuffer.payload, payloadLen);
             mp->encrypted.size = payloadLen;
 
-            printPacket("Lora RX", mp);
+            //printBytes("Received encrypted bytes",  mp->encrypted.bytes, mp->encrypted.size);
+
+            //printPacket("Lora RX", mp);
 
             airTime->logAirtime(RX_LOG, xmitMsec);
 
@@ -503,6 +519,8 @@ bool RadioLibInterface::startSend(meshtastic_MeshPacket *txp)
         configHardwareForSend(); // must be after setStandby
 
         size_t numbytes = beginSending(txp);
+
+        //printBytes("Raw outgoing packet: ", (uint8_t *)&radioBuffer, numbytes);
 
         int res = iface->startTransmit((uint8_t *)&radioBuffer, numbytes);
         if (res != RADIOLIB_ERR_NONE) {
