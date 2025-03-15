@@ -427,6 +427,13 @@ void RadioLibInterface::handleReceiveInterrupt()
             // altered packet with "from == 0" can do Remote Node Administration without permission
             if (radioBuffer.header.from == 0) {
                 LOG_WARN("Ignore received packet without sender");
+                airTime->logAirtime(RX_ALL_LOG, xmitMsec);
+                return;
+            }
+
+            if (radioBuffer.header.magicnum != PACKET_HEADER_MAGIC_NUMBER) {
+                LOG_INFO("Dropping received packet for magic number mismatch");
+                airTime->logAirtime(RX_ALL_LOG, xmitMsec);
                 return;
             }
 
@@ -440,11 +447,13 @@ void RadioLibInterface::handleReceiveInterrupt()
             mp->to = radioBuffer.header.to;
             mp->id = radioBuffer.header.id;
             mp->channel = radioBuffer.header.channel;
-            assert(HOP_MAX <= PACKET_FLAGS_HOP_LIMIT_MASK); // If hopmax changes, carefully check this code
-            mp->hop_limit = radioBuffer.header.flags & PACKET_FLAGS_HOP_LIMIT_MASK;
-            mp->hop_start = (radioBuffer.header.flags & PACKET_FLAGS_HOP_START_MASK) >> PACKET_FLAGS_HOP_START_SHIFT;
+            //assert(HOP_MAX <= PACKET_FLAGS_HOP_LIMIT_MASK); // If hopmax changes, carefully check this code
+            mp->hop_limit = radioBuffer.header.hop_limit & PACKET_FLAGS_HOP_LIMIT_MASK ;
+            mp->hop_start = radioBuffer.header.hop_start & PACKET_FLAGS_HOP_START_MASK ;
             mp->want_ack = !!(radioBuffer.header.flags & PACKET_FLAGS_WANT_ACK_MASK);
             mp->via_mqtt = !!(radioBuffer.header.flags & PACKET_FLAGS_VIA_MQTT_MASK);
+
+            LOG_DEBUG("RX packet: from=0x%08x,to=0x%08x,id=0x%08x,Ch=0x%x, HopStart=%d, HopLim=%d", mp->from, mp->to, mp->id, mp->channel, mp->hop_start, mp->hop_limit);
 
             addReceiveMetadata(mp);
 
