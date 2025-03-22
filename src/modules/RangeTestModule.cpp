@@ -8,6 +8,7 @@
  * The RangeTestModule class is an OSThread that runs the module.
  * The RangeTestModuleRadio class handles sending and receiving packets.
  */
+#include "Default.h"
 #include "RangeTestModule.h"
 #include "FSCommon.h"
 #include "MeshService.h"
@@ -111,7 +112,8 @@ void RangeTestModuleRadio::sendPayload(NodeNum dest, bool wantReplies)
     meshtastic_MeshPacket *p = allocDataPacket();
     p->to = dest;
     p->decoded.want_response = wantReplies;
-    p->hop_limit = 0;
+    //p->hop_limit = 0;
+    p->hop_limit = Default::getConfiguredOrDefaultHopLimit(config.lora.hop_limit);
     p->want_ack = false;
 
     packetSequence++;
