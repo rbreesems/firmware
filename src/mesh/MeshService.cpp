@@ -59,6 +59,17 @@ Allocator<meshtastic_QueueStatus> &queueStatusPool = staticQueueStatusPool;
 
 #include "Router.h"
 
+int8_t rtDynamicEnabled = 0;
+
+uint8_t getRtDynanmicEnable() {
+    return rtDynamicEnabled;
+}
+
+void setRtDynamicEnable(uint8_t v){
+    rtDynamicEnabled = v;
+}
+
+
 MeshService::MeshService()
     : toPhoneQueue(MAX_RX_TOPHONE), toPhoneQueueStatusQueue(MAX_RX_TOPHONE), toPhoneMqttProxyQueue(MAX_RX_TOPHONE),
       toPhoneClientNotificationQueue(MAX_RX_TOPHONE / 2)

@@ -30,6 +30,7 @@ RangeTestModule::RangeTestModule() : concurrency::OSThread("RangeTest") {}
 
 uint32_t packetSequence = 0;
 
+
 int32_t RangeTestModule::runOnce()
 {
 #if defined(ARCH_ESP32) || defined(ARCH_NRF52)
@@ -41,7 +42,9 @@ int32_t RangeTestModule::runOnce()
 
     // moduleConfig.range_test.enabled = 1;
     // moduleConfig.range_test.sender = 30;
-    // moduleConfig.range_test.save = 1;
+
+    // always disable saving of range test data as we don't want to waste cycles doing this
+    moduleConfig.range_test.save = 0;
 
     // Fixed position is useful when testing indoors.
     // config.position.fixed_position = 1;
@@ -68,6 +71,11 @@ int32_t RangeTestModule::runOnce()
 
             if (moduleConfig.range_test.sender) {
                 // If sender
+                if (!getRtDynanmicEnable()) {
+                    LOG_INFO("Range Test Module is soft-disabled."); 
+                    return (senderHeartbeat);
+                }
+
                 LOG_INFO("Range Test Module - Sending heartbeat every %d ms", (senderHeartbeat));
 
                 LOG_INFO("gpsStatus->getLatitude()     %d", gpsStatus->getLatitude());
