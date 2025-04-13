@@ -367,8 +367,6 @@ bool perhapsDecode(meshtastic_MeshPacket *p)
                 // Try to decrypt the packet if we can
                 crypto->decrypt(p->from, p->id, rawSize, bytes);
 
-                // printBytes("plaintext", bytes, p->encrypted.size);
-
                 // Take those raw bytes and convert them back into a well structured protobuf we can understand
                 memset(&p->decoded, 0, sizeof(p->decoded));
                 if (!pb_decode_from_bytes(bytes, rawSize, &meshtastic_Data_msg, &p->decoded)) {
