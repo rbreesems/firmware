@@ -626,6 +626,12 @@ bool PhoneAPI::wasSeenRecently(uint32_t id)
 bool PhoneAPI::handleToRadioPacket(meshtastic_MeshPacket &p)
 {
     printPacket("PACKET FROM PHONE", &p);
+#ifdef DEBUG_PORT
+    auto &pp = p.decoded;
+    meshtastic_NodeInfoLite *n = nodeDB->getMeshNode(getFrom(&p));
+    LOG_INFO("PhoneApi msg: from=0x%0x, id=0x%x, ln=%s, rxSNR=%g, hop_limit=%d, hop_start=%d, msg=%.*s",
+        p.from, p.id, n->user.long_name, p.rx_snr, p.hop_limit, p.hop_start, pp.payload.size, pp.payload.bytes);
+#endif
 
 #if defined(ARCH_PORTDUINO)
     // For use with the simulator, we should not ignore duplicate packets from the phone

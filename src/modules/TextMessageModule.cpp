@@ -11,7 +11,7 @@ ProcessMessage TextMessageModule::handleReceived(const meshtastic_MeshPacket &mp
 #ifdef DEBUG_PORT
     auto &p = mp.decoded;
     meshtastic_NodeInfoLite *n = nodeDB->getMeshNode(getFrom(&mp));
-    LOG_INFO("Received text msg from=0x%0x, id=0x%x, ln=%s, rxSNR=%g, hop_limit=%d, hop_start=%d, msg=%.*s",
+    LOG_INFO("TextModule msg: from=0x%0x, id=0x%x, ln=%s, rxSNR=%g, hop_limit=%d, hop_start=%d, msg=%.*s",
         mp.from, mp.id, n->user.long_name, mp.rx_snr, mp.hop_limit, mp.hop_start, p.payload.size, p.payload.bytes);
 #endif
     // We only store/display messages destined for us.
