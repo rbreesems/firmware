@@ -165,7 +165,8 @@ static void drawIconScreen(const char *upperMsg, OLEDDisplay *display, OLEDDispl
 #ifdef USERPREFS_SPLASH_TITLE
     const char *title = USERPREFS_SPLASH_TITLE;
 #else
-    const char *title = "meshtastic.org";
+    //const char *title = "meshtastic.org";
+    const char *title = "HCRU 05/25.1";
 #endif
     display->drawString(x + getStringCenteredX(title), y + SCREEN_HEIGHT - FONT_HEIGHT_MEDIUM, title);
     display->setFont(FONT_SMALL);

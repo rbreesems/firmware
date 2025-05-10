@@ -407,6 +407,18 @@ bool perhapsDecode(meshtastic_MeshPacket *p)
             p->decoded.portnum = meshtastic_PortNum_TEXT_MESSAGE_APP;
         } */
 
+        // Message is decrypted. Change range test payload
+        if (isBroadcast(p->to)) {
+            if ((p->decoded.payload.size > 4) && strncmp("seq ", (char *)p->decoded.payload.bytes, 4) == 0) {
+                // this is a range test packet. 
+                auto bp = (char *)p->decoded.payload.bytes + p->decoded.payload.size;
+                auto extra = sprintf(bp, " RSSI=%i SNR=%.2f", p->rx_rssi, p->rx_snr);
+                if (extra > 0){
+                    p->decoded.payload.size = p->decoded.payload.size + extra;
+                }
+            }
+        }
+
         printPacket("decoded message", p);
 #if ENABLE_JSON_LOGGING
         LOG_TRACE("%s", MeshPacketSerializer::JsonSerialize(p, false).c_str());

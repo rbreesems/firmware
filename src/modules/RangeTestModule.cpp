@@ -49,15 +49,32 @@ int32_t RangeTestModule::runOnce()
     // Fixed position is useful when testing indoors.
     // config.position.fixed_position = 1;
 
+    if (moduleConfig.range_test.enabled && moduleConfig.range_test.sender == 0) {
+        moduleConfig.range_test.sender = 30; // always enabled with default sending value
+    }
+
     uint32_t senderHeartbeat = moduleConfig.range_test.sender * 1000;
 
+    // All Cave nodes will have this enabled
     if (moduleConfig.range_test.enabled) {
 
         if (firstTime) {
             rangeTestModuleRadio = new RangeTestModuleRadio();
+            // with Soft RT on/off without reboot, every radio that 
+            // has range_test enabled can possibly be a sender.
+            // So, never disable this thread
 
             firstTime = 0;
+            LOG_INFO("Init Range Test Module -- Sender");
+            started = millis(); // make a note of when we started
+            if (!getRtDynanmicEnable()) {
+                    LOG_INFO("Range Test Module is soft-disabled."); 
+                    return (senderHeartbeat);
+            }
+            
+            return (5000);      // Sending first message 5 seconds after initialization.
 
+#if 0
             if (moduleConfig.range_test.sender) {
                 LOG_INFO("Init Range Test Module -- Sender");
                 started = millis(); // make a note of when we started
@@ -67,6 +84,7 @@ int32_t RangeTestModule::runOnce()
                 return disable();
                 // This thread does not need to run as a receiver
             }
+#endif
         } else {
 
             if (moduleConfig.range_test.sender) {
@@ -121,7 +139,8 @@ void RangeTestModuleRadio::sendPayload(NodeNum dest, bool wantReplies)
     p->to = dest;
     p->decoded.want_response = wantReplies;
     //p->hop_limit = 0;
-    p->hop_limit = Default::getConfiguredOrDefaultHopLimit(config.lora.hop_limit);
+    // Conditionally hop Range Test packets
+    p->hop_limit = getRtHop() ? Default::getConfiguredOrDefaultHopLimit(config.lora.hop_limit) : 0;
     p->want_ack = false;
 
     packetSequence++;
