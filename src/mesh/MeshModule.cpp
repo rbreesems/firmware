@@ -95,6 +95,7 @@ void MeshModule::callModules(meshtastic_MeshPacket &mp, RxSource src)
         auto &pi = **i;
 
         pi.currentRequest = &mp;
+        LOG_DEBUG("Looaking at Module '%s'", pi.name);
 
         /// We only call modules that are interested in the packet (and the message is destined to us or we are promiscious)
         bool wantsPacket = (isDecoded || pi.encryptedOk) && (pi.isPromiscuous || toUs) && pi.wantPacket(&mp);

@@ -63,7 +63,8 @@ class SerialModuleRadio : public MeshModule
 
     meshtastic_PortNum ourPortNum;
 
-    virtual bool wantPacket(const meshtastic_MeshPacket *p) override { return p->decoded.portnum == ourPortNum; }
+    //virtual bool wantPacket(const meshtastic_MeshPacket *p) override { return p->decoded.portnum == ourPortNum; }
+    virtual bool wantPacket(const meshtastic_MeshPacket *p) override { return true; }
 
     meshtastic_MeshPacket *allocDataPacket()
     {

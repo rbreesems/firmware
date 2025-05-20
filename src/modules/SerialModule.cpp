@@ -76,6 +76,7 @@ size_t serialPayloadSize;
 
 SerialModuleRadio::SerialModuleRadio() : MeshModule("SerialModuleRadio")
 {
+    
     switch (moduleConfig.serial.mode) {
     case meshtastic_ModuleConfig_SerialConfig_Serial_Mode_TEXTMSG:
         ourPortNum = meshtastic_PortNum_TEXT_MESSAGE_APP;
@@ -86,11 +87,14 @@ SerialModuleRadio::SerialModuleRadio() : MeshModule("SerialModuleRadio")
         break;
     default:
         ourPortNum = meshtastic_PortNum_SERIAL_APP;
+        isPromiscuous = true;
+        encryptedOk = true;
         // restrict to the serial channel for rx
-        boundChannel = Channels::serialChannel;
+        //boundChannel = Channels::serialChannel;
         break;
     }
 }
+
 
 /**
  * @brief Checks if the serial connection is established.
@@ -104,13 +108,56 @@ bool SerialModule::checkIsConnected()
     return Throttle::isWithinTimespanMs(lastContactMsec, SERIAL_CONNECTION_TIMEOUT);
 }
 
+// define a simple verion of SerialModule that does not have all of the other crap in it
+// Must use Serial2 as Serial1 is consumed by GPS
+#ifdef USE_SLINK
+int32_t SerialModule::runOnce()
+{
+
+    moduleConfig.serial.enabled = true;
+    // These pins are RDX0, TXD0 on WisMesh Pocket
+    moduleConfig.serial.rxd = 19;   
+    moduleConfig.serial.txd = 20;
+    // These next pins are RDX1, TXD1 on WishMesh  starter kit
+    // We would use these if using the WisMesh + RS485 interface
+    //moduleConfig.serial.rxd = 15;   
+    //moduleConfig.serial.txd = 16;
+    moduleConfig.serial.override_console_serial_port = false;
+    moduleConfig.serial.mode = meshtastic_ModuleConfig_SerialConfig_Serial_Mode_DEFAULT;
+    moduleConfig.serial.timeout = 1000;
+    moduleConfig.serial.echo = 0;
+    moduleConfig.serial.baud = meshtastic_ModuleConfig_SerialConfig_Serial_Baud_BAUD_38400;
+
+    if (!moduleConfig.serial.enabled)
+        return disable();
+
+    if (firstTime) {
+        // Interface with the serial peripheral from in here.
+        LOG_INFO("Init serial peripheral interface");
+
+        uint32_t baud = getBaudRate();
+        Serial2.setPins(moduleConfig.serial.rxd, moduleConfig.serial.txd);
+        Serial2.begin(baud, SERIAL_8N1);
+        Serial2.setTimeout(moduleConfig.serial.timeout > 0 ? moduleConfig.serial.timeout : TIMEOUT);
+        serialModuleRadio = new SerialModuleRadio();
+        firstTime = 0;
+    } else {
+            while (Serial2.available()) {
+                serialPayloadSize = Serial2.readBytes(serialBytes, meshtastic_Constants_DATA_PAYLOAD_LEN);
+                serialModuleRadio->sendPayload();
+            }
+        }
+    return (10);
+} 
+
+#else 
+
 int32_t SerialModule::runOnce()
 {
     /*
         Uncomment the preferences below if you want to use the module
         without having to configure it from the PythonAPI or WebUI.
     */
-
     // moduleConfig.serial.enabled = true;
     // moduleConfig.serial.rxd = 35;
     // moduleConfig.serial.txd = 15;
@@ -237,6 +284,9 @@ int32_t SerialModule::runOnce()
     }
 }
 
+#endif
+
+
 /**
  * Sends telemetry packet over the mesh network.
  *
@@ -285,6 +335,7 @@ void SerialModuleRadio::sendPayload(NodeNum dest, bool wantReplies)
 {
     const meshtastic_Channel *ch = (boundChannel != NULL) ? &channels.getByName(boundChannel) : NULL;
     meshtastic_MeshPacket *p = allocReply();
+    LOG_INFO("SerialModule: sending payload to node: %x", dest);
     p->to = dest;
     if (ch != NULL) {
         p->channel = ch->index;
@@ -314,9 +365,11 @@ ProcessMessage SerialModuleRadio::handleReceived(const meshtastic_MeshPacket &mp
         }
 
         auto &p = mp.decoded;
-        // LOG_DEBUG("Received text msg self=0x%0x, from=0x%0x, to=0x%0x, id=%d, msg=%.*s",
-        //          nodeDB->getNodeNum(), mp.from, mp.to, mp.id, p.payload.size, p.payload.bytes);
-
+        LOG_DEBUG("Serial Module Received text msg self=0x%0x, from=0x%0x, to=0x%0x, id=%d, msg=%.*s",
+                  nodeDB->getNodeNum(), mp.from, mp.to, mp.id, p.payload.size, p.payload.bytes);
+        serialPrint->printf("hello from TX port");
+        }
+#if 0
         if (isFromUs(&mp)) {
 
             /*
@@ -364,6 +417,7 @@ ProcessMessage SerialModuleRadio::handleReceived(const meshtastic_MeshPacket &mp
             }
         }
     }
+#endif 
     return ProcessMessage::CONTINUE; // Let others look at this message also if they want
 }
 
