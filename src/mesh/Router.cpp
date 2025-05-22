@@ -183,6 +183,9 @@ ErrorCode Router::sendLocal(meshtastic_MeshPacket *p, RxSource src)
         // If we are sending a broadcast, we also treat it as if we just received it ourself
         // this allows local apps (and PCs) to see broadcasts sourced locally
         if (isBroadcast(p->to)) {
+#ifdef SLINK_DEBUG
+            LOG_DEBUG("Router::sendLocal broadcast packet, calling router handleReceived");
+#endif
             handleReceived(p, src);
         }
 
@@ -579,6 +582,9 @@ NodeNum Router::getNodeNum()
 void Router::handleReceived(meshtastic_MeshPacket *p, RxSource src)
 {
     bool skipHandle = false;
+#if SLINK_DEBUG
+    LOG_DEBUG("In Router::handleReceived");
+#endif
     // Also, we should set the time from the ISR and it should have msec level resolution
     p->rx_time = getValidTime(RTCQualityFromNet); // store the arrival timestamp for the phone
     // Store a copy of encrypted packet for MQTT
