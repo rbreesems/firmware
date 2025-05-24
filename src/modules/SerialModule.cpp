@@ -12,11 +12,13 @@
 /*
 
     This module has been totally rewritten to function as a serial 'interface'
-    for the router to send packets over similar to the MQTT interface.
+    for the router to send packets over the serial link similar to the MQTT interface.
   
     The serial link is simply an alternate path for packets other than the air.
 
     This is not a module, it does not source new packets or sink packets
+
+    This is intended for the WisMesh starter kit (19007 board+ 4630) + RS485 which uses Serial1
 
 */
 
@@ -39,8 +41,7 @@ meshtastic_serialPacket inPacket;
 char tmpbuf[250];  // for debug only
 
 
-//SerialModule::SerialModule() : StreamAPI(&Serial2), concurrency::OSThread("Serial") {}
-//static Print *serialPrint = &Serial2;
+
 SerialModule::SerialModule() : StreamAPI(&Serial1), concurrency::OSThread("Serial") {}
 static Print *serialPrint = &Serial1;
 
@@ -160,8 +161,6 @@ bool checkIfValidPacket(meshtastic_serialPacket *sp) {
 SerialModuleRadio::SerialModuleRadio() : MeshModule("SerialModuleRadio")
 {
     ourPortNum = meshtastic_PortNum_SERIAL_APP;
-    isPromiscuous = true;
-    encryptedOk = true;
     
 }
 
@@ -174,7 +173,8 @@ int32_t SerialModule::runOnce()
 {
 
     moduleConfig.serial.enabled = true;
-    // These pins are RDX0, TXD0 on WisMesh Pocket
+    // These pins are RDX0, TXD0 on WisMesh Pocket. Cannot use this in production
+    // as the WisMesh pocket has a GPS on UART1, which clashes with the RS485 board
     //moduleConfig.serial.rxd = 19;   
     //moduleConfig.serial.txd = 20;
     // These next pins are RDX1, TXD1 on WishMesh  starter kit
@@ -208,6 +208,7 @@ int32_t SerialModule::runOnce()
                     LOG_DEBUG("Serial Module failed CRC on RX");
                 } else {
                     // checks passed, pass this packet on
+                    LOG_DEBUG("Serial Module RX Insert packet to mesh");
                     insertSerialPacketToMesh(&inPacket);
                 }
             }
@@ -245,13 +246,7 @@ meshtastic_MeshPacket *SerialModuleRadio::allocReply()
 }
 
 bool SerialModuleRadio::wantPacket(const meshtastic_MeshPacket *p) {
-    //if (p->decoded.portnum == meshtastic_PortNum_TELEMETRY_APP) return false;
-    //if (p->decoded.portnum == meshtastic_PortNum_POSITION_APP) return false;
-
-    //LOG_DEBUG("Serial Module want packet, portnum: %d", p->decoded.portnum);
-    //return true;
-
-    // never accept packets from module handler
+    // never accept packets from module handler as we are relying on sampling the RX input
     return false;
 }
 
@@ -288,46 +283,7 @@ void SerialModuleRadio::onSend(const meshtastic_MeshPacket &mp, const meshtastic
  */
 ProcessMessage SerialModuleRadio::handleReceived(const meshtastic_MeshPacket &mp)
 {
-    if (moduleConfig.serial.enabled) {
-        if (moduleConfig.serial.mode == meshtastic_ModuleConfig_SerialConfig_Serial_Mode_PROTO) {
-            // in API mode we don't care about stuff from radio.
-            return ProcessMessage::CONTINUE;
-        }
-
-        auto &p = mp.decoded;
-        LOG_DEBUG("Serial Module Received  ourNodeNum:%0x from=0x%0x, to=0x%0x, id=0x%0x, size=%d,  portnum=%d",
-                  nodeDB->getNodeNum(), mp.from, mp.to, mp.id, p.payload.size, mp.decoded.portnum);
-        if (mp.decoded.portnum == 1) {
-            LOG_DEBUG("Serial Module Received msg: %s", p.payload.bytes);
-        }
-
-       
-        
-        //sprintf(serialTxBytes, "Hello from RX buffer");
-        //serialPrint->printf("hello from TX port");
-        //serialPrint->write(p.payload.bytes, p.payload.size);
-        //serialPrint->printf("%s", p.payload.bytes);
-
-        // For TX > RX echo test, just write the payload
-        if (mp.decoded.portnum == 1) {
-            meshPacketToSerialPacket(mp, &outPacket);
-            // debug check
-            if (!checkIfValidPacket(&outPacket)) {
-                LOG_DEBUG("Serial Module failed CRC on TX");
-            } else {
-            //memcpy(serialTxBytes, p.payload.bytes, p.payload.size);
-            //serialTxBytes[p.payload.size] = 0;
-            //sprintf(serialTxBytes, "Hello from RX buffer");
-                if (Serial1.availableForWrite()) {
-                    //Serial1.write(serialTxBytes, p.payload.size+1);
-                    LOG_DEBUG("Serial Module TX packet of %d bytes", outPacket.header.size);
-                    Serial1.write((uint8_t *) &outPacket, outPacket.header.size);
-                }
-            }
-        }
-
-    }
-
+    // we are never going to handle packets when called from the Module handler
     return ProcessMessage::CONTINUE; // Let others look at this message also if they want
 }
 
