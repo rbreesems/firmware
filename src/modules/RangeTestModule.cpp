@@ -95,13 +95,13 @@ int32_t RangeTestModule::runOnce()
                 }
 
                 LOG_INFO("Range Test Module - Sending heartbeat every %d ms", (senderHeartbeat));
-
+#if !MESHTASTIC_EXCLUDE_GPS
                 LOG_INFO("gpsStatus->getLatitude()     %d", gpsStatus->getLatitude());
                 LOG_INFO("gpsStatus->getLongitude()    %d", gpsStatus->getLongitude());
                 LOG_INFO("gpsStatus->getHasLock()      %d", gpsStatus->getHasLock());
                 LOG_INFO("gpsStatus->getDOP()          %d", gpsStatus->getDOP());
                 LOG_INFO("fixed_position()             %d", config.position.fixed_position);
-
+#endif
                 // Only send packets if the channel is less than 25% utilized.
                 if (airTime->isTxAllowedChannelUtil(true)) {
                     rangeTestModuleRadio->sendPayload();
