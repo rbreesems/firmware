@@ -436,6 +436,11 @@ void RadioLibInterface::handleReceiveInterrupt()
                 airTime->logAirtime(RX_ALL_LOG, xmitMsec);
                 return;
             }
+#ifdef LORA_DISABLE_RECEIVE
+            LOG_INFO("Dropping received packet because LORA RX is disabled");
+            airTime->logAirtime(RX_ALL_LOG, xmitMsec);
+            return;
+#endif
 
             // Note: we deliver _all_ packets to our router (i.e. our interface is intentionally promiscuous).
             // This allows the router and other apps on our node to sniff packets (usually routing) between other

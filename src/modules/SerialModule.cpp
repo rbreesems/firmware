@@ -103,8 +103,8 @@ void insertSerialPacketToMesh(meshtastic_serialPacket *sp) {
     p->id = sp->header.id;
     p->channel = sp->header.channel;
     //assert(HOP_MAX <= PACKET_FLAGS_HOP_LIMIT_MASK); // If hopmax changes, carefully check this code
-    p->hop_limit = sp->header.hop_limit & PACKET_FLAGS_HOP_LIMIT_MASK ;
-    p->hop_start = sp->header.hop_start & PACKET_FLAGS_HOP_START_MASK ;
+    p->hop_limit = sp->header.hop_limit;
+    p->hop_start = sp->header.hop_start;
     p->want_ack = !!(sp->header.flags & PACKET_FLAGS_WANT_ACK_MASK);
     p->via_slink = true;
     p->via_mqtt = 0;
@@ -119,7 +119,7 @@ void insertSerialPacketToMesh(meshtastic_serialPacket *sp) {
         p->decoded.payload.size = payloadLen;
     }
 
-    LOG_DEBUG ("Serial Module RX  from=0x%0x, to=0x%0x, id=0x%0x",
+    LOG_DEBUG ("Serial Module RX  from=0x%0x, to=0x%0x, packet_id=0x%0x",
               p->from, p->to, p->id);
 
     if (p->which_payload_variant == meshtastic_MeshPacket_decoded_tag) {
@@ -254,14 +254,14 @@ bool SerialModuleRadio::wantPacket(const meshtastic_MeshPacket *p) {
  Called from Router.cpp/Router::send
  Send this over the link
 */
-void SerialModuleRadio::onSend(const meshtastic_MeshPacket &mp, const meshtastic_MeshPacket &mp_decoded) {
+void SerialModuleRadio::onSend(const meshtastic_MeshPacket &mp) {
 
     if (mp.via_slink) {
         LOG_DEBUG("Serial Module Onsend TX - ignoring packet that came from slink");
     }
-    auto &p = mp_decoded.decoded;
-    LOG_DEBUG("Serial Module Onsend TX   from=0x%0x, to=0x%0x, id=0x%0x, size=%d,  portnum=%d",
-              mp.from, mp.to, mp.id, p.payload.size, mp.decoded.portnum);
+    
+    LOG_DEBUG("Serial Module Onsend TX   from=0x%0x, to=0x%0x, packet_id=0x%0x",
+              mp.from, mp.to, mp.id);
     meshPacketToSerialPacket(mp, &outPacket);
     // debug check
     if (!checkIfValidPacket(&outPacket)) {

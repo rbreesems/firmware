@@ -79,7 +79,7 @@ class SerialModuleRadio : public MeshModule
 
   public:
     SerialModuleRadio();
-    void onSend(const meshtastic_MeshPacket &mp, const meshtastic_MeshPacket &mp_decoded);
+    void onSend(const meshtastic_MeshPacket &mp);
 
 
   protected:

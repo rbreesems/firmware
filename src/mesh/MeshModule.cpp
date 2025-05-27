@@ -53,6 +53,10 @@ meshtastic_MeshPacket *MeshModule::allocAckNak(meshtastic_Routing_Error err, Nod
 
     p->priority = meshtastic_MeshPacket_Priority_ACK;
 
+#ifdef SLINK_DEBUG
+    LOG_DEBUG("MeshModule allocAckNak,  payload_size: %d, to=0x%0x, PacketidFrom=0x%0x,  hopLimit: %d", p->decoded.payload.size, to, idFrom, hopLimit);
+#endif
+
     p->hop_limit = hopLimit; // Flood ACK back to original sender
     p->to = to;
     p->decoded.request_id = idFrom;

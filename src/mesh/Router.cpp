@@ -286,14 +286,14 @@ ErrorCode Router::send(meshtastic_MeshPacket *p)
             mqtt->onSend(*p, *p_decoded, chIndex);
         }
 #endif
-#if defined(USE_SLINK)
-        if (moduleConfig.serial.enabled){
-            serialModuleRadio->onSend(*p, *p_decoded);
-        }
 
-#endif
         packetPool.release(p_decoded);
     }
+#if defined(USE_SLINK)
+    if (moduleConfig.serial.enabled){
+        serialModuleRadio->onSend(*p);
+    }
+#endif
 
     assert(iface); // This should have been detected already in sendLocal (or we just received a packet from outside)
     return iface->send(p);

@@ -90,18 +90,32 @@ bool ReliableRouter::shouldFilterReceived(const meshtastic_MeshPacket *p)
  */
 void ReliableRouter::sniffReceived(const meshtastic_MeshPacket *p, const meshtastic_Routing *c)
 {
+#ifdef SLINK_DEBUG
+    LOG_DEBUG("ReliableRouter::sniffReceived from=0x%0x, to=0x%0x, packet_id=0x%0x, variant: %d, hop_limit: %d, hop_start: %d , config_hop_limit: %d", p->from, p->to, p->id, p->which_payload_variant, p->hop_limit, p->hop_start, config.lora.hop_limit);
+#endif
     if (isToUs(p)) { // ignore ack/nak/want_ack packets that are not address to us (we only handle 0 hop reliability)
         if (p->want_ack) {
+#ifdef SLINK_DEBUG
+    LOG_DEBUG("ReliableRouter::sniffReceived our packet and wants ack");
+#endif
             if (MeshModule::currentReply) {
                 LOG_DEBUG("Another module replied to this message, no need for 2nd ack");
             } else if (p->which_payload_variant == meshtastic_MeshPacket_decoded_tag) {
                 // A response may be set to want_ack for retransmissions, but we don't need to ACK a response if it received an
                 // implicit ACK already. If we received it directly, only ACK with a hop limit of 0
-                if (!p->decoded.request_id)
+                if (!p->decoded.request_id) {
+#ifdef SLINK_DEBUG
+                LOG_INFO("ReliableRouter::sniffReceived Ack/Nak Routing_Error_NONE, getHopLimit");
+#endif
                     sendAckNak(meshtastic_Routing_Error_NONE, getFrom(p), p->id, p->channel,
                                routingModule->getHopLimitForResponse(p->hop_start, p->hop_limit));
-                else if (p->hop_start > 0 && p->hop_start == p->hop_limit)
+                }
+                else if (p->hop_start > 0 && p->hop_start == p->hop_limit)  {
+#ifdef SLINK_DEBUG
+                LOG_INFO("ReliableRouter::sniffReceived Ack/Nak Routing_Error_NONE, 0 hoplimit");
+#endif
                     sendAckNak(meshtastic_Routing_Error_NONE, getFrom(p), p->id, p->channel, 0);
+                }
             } else if (p->which_payload_variant == meshtastic_MeshPacket_encrypted_tag && p->channel == 0 &&
                        (nodeDB->getMeshNode(p->from) == nullptr || nodeDB->getMeshNode(p->from)->user.public_key.size == 0)) {
                 LOG_INFO("PKI packet from unknown node, send PKI_UNKNOWN_PUBKEY");
@@ -109,6 +123,9 @@ void ReliableRouter::sniffReceived(const meshtastic_MeshPacket *p, const meshtas
                            routingModule->getHopLimitForResponse(p->hop_start, p->hop_limit));
             } else {
                 // Send a 'NO_CHANNEL' error on the primary channel if want_ack packet destined for us cannot be decoded
+#ifdef SLINK_DEBUG
+                LOG_INFO("ReliableRouter::sniffReceived Ack/Nak Routing_Error_NO_CHANNEL");
+#endif
                 sendAckNak(meshtastic_Routing_Error_NO_CHANNEL, getFrom(p), p->id, channels.getPrimaryIndex(),
                            routingModule->getHopLimitForResponse(p->hop_start, p->hop_limit));
             }
