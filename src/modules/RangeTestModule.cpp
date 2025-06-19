@@ -22,6 +22,7 @@
 #include "gps/GeoCoord.h"
 #include <Arduino.h>
 #include <Throttle.h>
+#include "BuzzerModule.h"
 
 RangeTestModule *rangeTestModule;
 RangeTestModuleRadio *rangeTestModuleRadio;
@@ -59,6 +60,7 @@ int32_t RangeTestModule::runOnce()
     if (moduleConfig.range_test.enabled) {
 
         if (firstTime) {
+
             rangeTestModuleRadio = new RangeTestModuleRadio();
             // with Soft RT on/off without reboot, every radio that 
             // has range_test enabled can possibly be a sender.
@@ -175,6 +177,9 @@ ProcessMessage RangeTestModuleRadio::handleReceived(const meshtastic_MeshPacket 
             if (moduleConfig.range_test.save) {
                 appendFile(mp);
             }
+#ifdef USE_RT_BUZZER
+            buzzerModule->startTone(BUZZER_FULL_TONE, 10, 0, 0);
+#endif
 
             /*
             NodeInfoLite *n = nodeDB->getMeshNode(getFrom(&mp));

@@ -55,6 +55,13 @@ extern "C" {
 
 #define LED_STATE_ON 1 // State when LED is litted
 
+// GPIO
+#define PIN_IO1 17
+#define PIN_IO2 34
+#define PIN_IO3 21
+#define PIN_IO4 4
+
+
 /*
  * Buttons
  */

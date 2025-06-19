@@ -91,6 +91,10 @@
 #include "modules/DropzoneModule.h"
 #endif
 
+#ifdef USE_RT_BUZZER
+#include "modules/BuzzerModule.h"
+#endif
+
 /**
  * Create module instances here.  If you are adding a new module, you must 'new' it here (or somewhere else)
  */
@@ -211,6 +215,9 @@ void setupModules()
 #if !MESHTASTIC_EXCLUDE_SERIAL
         new SerialModule();
 #endif
+#endif
+#ifdef USE_RT_BUZZER
+        buzzerModule = new BuzzerModule();
 #endif
 #ifdef ARCH_ESP32
         // Only run on an esp32 based device.

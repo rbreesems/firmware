@@ -185,7 +185,8 @@ int32_t SerialModule::runOnce()
     moduleConfig.serial.mode = meshtastic_ModuleConfig_SerialConfig_Serial_Mode_DEFAULT;
     moduleConfig.serial.timeout = TIMEOUT;
     moduleConfig.serial.echo = 0;
-    moduleConfig.serial.baud = meshtastic_ModuleConfig_SerialConfig_Serial_Baud_BAUD_19200;
+    //moduleConfig.serial.baud = meshtastic_ModuleConfig_SerialConfig_Serial_Baud_BAUD_19200;
+    moduleConfig.serial.baud = meshtastic_ModuleConfig_SerialConfig_Serial_Baud_BAUD_4800;
 
     if (!moduleConfig.serial.enabled)
         return disable();
