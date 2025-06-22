@@ -7,7 +7,16 @@
 #include <functional>
 
 
-#define BUZZER_PIN PIN_IO3   // Slot C
+#define BUZZER_PIN BUZZER_IO
+
+#if BUZZER_LOWTRUE
+#define BUZZER_ON LOW
+#define BUZZER_OFF HIGH
+#else
+#define BUZZER_ON HIGH
+#define BUZZER_OFF LOW
+#endif
+
 //#define BUZZER_PIN PIN_IO1     // Slot A
 //#define BUZZER_PIN PIN_IO2     // Slot B
 //#define BUZZER_PIN PIN_IO4
@@ -22,17 +31,15 @@ class BuzzerModule : private concurrency::OSThread
     bool firstTime = 1;
     unsigned long toneStarted = 0;   //tone started
     unsigned long toneFinish = 0;   //finish time for tone
-    unsigned long pulseStarted = 0;   //pulse started
-    unsigned long pulseFinish = 0;   //pulse finish
     unsigned long pauseFinish = 0;
-    uint16_t currentTone = 0;     // in MS, will be FULL/HALF/QUARTER  
-    uint16_t toneDurationSecs = 0;    // how long one tone should last
-    uint16_t tonePauseSecs = 0;       // pause between tones
+    uint16_t currentTone = 0;     // either 0 or non-zero
+    unsigned long toneDurationMSecs = 0;    // how long one tone should last
+    unsigned long tonePauseMSecs = 0;       // pause between tones
     uint16_t toneNumber = 0;       // number of tones
 
   public:
     BuzzerModule();
-    void startTone(uint16_t tone, uint16_t duration, uint16_t pause, uint16_t number);
+    void startTone(uint16_t tone, unsigned long durationMs, unsigned long pauseMs, uint16_t number);
 
   protected:
     virtual int32_t runOnce() override;
