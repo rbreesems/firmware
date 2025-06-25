@@ -22,6 +22,9 @@
 #include "gps/GeoCoord.h"
 #include <Arduino.h>
 #include <Throttle.h>
+#ifdef USE_RT_BUZZER
+#include "BuzzerModule.h"
+#endif
 
 RangeTestModule *rangeTestModule;
 RangeTestModuleRadio *rangeTestModuleRadio;
@@ -175,6 +178,16 @@ ProcessMessage RangeTestModuleRadio::handleReceived(const meshtastic_MeshPacket 
                 appendFile(mp);
             }
 
+#ifdef USE_RT_BUZZER
+            uint8_t num_tones = 1;
+            if (mp.rx_rssi < -110) {
+                num_tones = 3;
+            }
+            else if (mp.rx_rssi < -90) {
+                num_tones = 2;
+            }
+            buzzerModule->startTone(1, 500, 500, num_tones);
+#endif
             /*
             NodeInfoLite *n = nodeDB->getMeshNode(getFrom(&mp));
 
