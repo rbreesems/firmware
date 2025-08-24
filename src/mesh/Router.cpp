@@ -14,6 +14,9 @@
 #if !MESHTASTIC_EXCLUDE_MQTT
 #include "mqtt/MQTT.h"
 #endif
+#if defined(USE_SLINK)
+#include "modules/SerialModule.h"
+#endif
 #include "Default.h"
 #if ARCH_PORTDUINO
 #include "platform/portduino/PortduinoGlue.h"
@@ -291,7 +294,11 @@ ErrorCode Router::send(meshtastic_MeshPacket *p)
 #endif
         packetPool.release(p_decoded);
     }
-
+#if defined(USE_SLINK)
+    if (moduleConfig.serial.enabled){
+        serialModuleRadio->onSend(*p);
+    }
+#endif
 #if HAS_UDP_MULTICAST
     if (udpHandler && config.network.enabled_protocols & meshtastic_Config_NetworkConfig_ProtocolFlags_UDP_BROADCAST) {
         udpHandler->onSend(const_cast<meshtastic_MeshPacket *>(p));
@@ -440,6 +447,17 @@ DecodeState perhapsDecode(meshtastic_MeshPacket *p)
             // Switch the port from PortNum_TEXT_MESSAGE_COMPRESSED_APP to PortNum_TEXT_MESSAGE_APP
             p->decoded.portnum = meshtastic_PortNum_TEXT_MESSAGE_APP;
         } */
+        // Message is decrypted. Change range test payload
+        if (isBroadcast(p->to)) {
+            if ((p->decoded.payload.size > 4) && strncmp("seq ", (char *)p->decoded.payload.bytes, 4) == 0) {
+                // this is a range test packet. 
+                auto bp = (char *)p->decoded.payload.bytes + p->decoded.payload.size;
+                auto extra = sprintf(bp, " RSSI=%i SNR=%.2f", p->rx_rssi, p->rx_snr);
+                if (extra > 0){
+                    p->decoded.payload.size = p->decoded.payload.size + extra;
+                }
+            }
+        }
 
         printPacket("decoded message", p);
 #if ENABLE_JSON_LOGGING
@@ -614,6 +632,9 @@ NodeNum Router::getNodeNum()
 void Router::handleReceived(meshtastic_MeshPacket *p, RxSource src)
 {
     bool skipHandle = false;
+#if SLINK_DEBUG
+    LOG_DEBUG("In Router::handleReceived");
+#endif
     // Also, we should set the time from the ISR and it should have msec level resolution
     p->rx_time = getValidTime(RTCQualityFromNet); // store the arrival timestamp for the phone
     // Store a copy of encrypted packet for MQTT
