@@ -71,6 +71,7 @@ uint32_t computeCrc32(const uint8_t* buf, uint16_t len) {
 }
 
 
+
 void meshPacketToSerialPacket (const meshtastic_MeshPacket &mp, meshtastic_serialPacket *sp) {
     sp->header.hbyte1 = headerByte1;
     sp->header.hbyte2 = headerByte2;
@@ -217,7 +218,12 @@ int32_t SerialModule::runOnce()
             }
         }
     return (50);
-} 
+}
+
+bool SerialModule::isValidConfig(const meshtastic_ModuleConfig_SerialConfig &config)
+{
+    return true;
+}
 
 /**
  * @brief Checks if the serial connection is established.

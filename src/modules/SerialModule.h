@@ -54,13 +54,13 @@ class SerialModule : public StreamAPI, private concurrency::OSThread
 
   public:
     SerialModule();
+    static bool isValidConfig(const meshtastic_ModuleConfig_SerialConfig &config);
 
   protected:
     virtual int32_t runOnce() override;
 
     /// Check the current underlying physical link to see if the client is currently connected
     virtual bool checkIsConnected() override;
-
    
   private:
     uint32_t getBaudRate();
@@ -82,6 +82,7 @@ class SerialModuleRadio : public MeshModule
   public:
     SerialModuleRadio();
     void onSend(const meshtastic_MeshPacket &mp);
+    
 
 
   protected:
