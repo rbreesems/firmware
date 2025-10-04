@@ -112,6 +112,10 @@
 #include "modules/BuzzerModule.h"
 #endif
 
+#ifdef USE_BLINKY
+#include "modules/BlinkModule.h"
+#endif
+
 /**
  * Create module instances here.  If you are adding a new module, you must 'new' it here (or somewhere else)
  */
@@ -280,6 +284,9 @@ void setupModules()
 #endif
 #ifdef USE_RT_BUZZER
         buzzerModule = new BuzzerModule();
+#endif
+#ifdef USE_BLINKY
+        blinkModule = new BlinkModule();
 #endif
 #endif
 #ifdef ARCH_ESP32
