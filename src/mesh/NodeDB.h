@@ -94,6 +94,8 @@ extern meshtastic_LocalModuleConfig moduleConfig;
 extern meshtastic_User &owner;
 extern meshtastic_Position localPosition;
 
+extern uint16_t get_myshortname_magicnumber();
+
 static constexpr const char *deviceStateFileName = "/prefs/device.proto";
 static constexpr const char *legacyPrefFileName = "/prefs/db.proto";
 static constexpr const char *nodeDatabaseFileName = "/prefs/nodes.proto";

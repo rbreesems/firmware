@@ -149,6 +149,21 @@ uint32_t get_st7789_id(uint8_t cs, uint8_t sck, uint8_t mosi, uint8_t dc, uint8_
 
 #endif
 
+uint16_t get_myshortname_magicnumber() {
+
+    uint16_t retval = 0;
+    auto node = nodeDB->getMeshNode(myNodeInfo.my_node_num);
+    const char *sender = (node) ? node->user.short_name : "????";
+
+    if ( sender[2] >= 0x30 && sender[2]  <= 0x39) {
+        retval = (sender[2] - 0x30) * 10;
+    }
+    if ( sender[3] >= 0x30 && sender[3]  <= 0x39) {
+        retval += (sender[3] - 0x30);
+    }
+    return retval;
+}
+
 bool meshtastic_NodeDatabase_callback(pb_istream_t *istream, pb_ostream_t *ostream, const pb_field_iter_t *field)
 {
     if (ostream) {
