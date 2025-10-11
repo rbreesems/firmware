@@ -109,6 +109,12 @@ void Router::enqueueReceivedMessage(meshtastic_MeshPacket *p)
             packetPool.release(old_p);
         }
     }
+#ifdef FLAMINGO_SNIFFER
+    char toname[5],fromname[5];
+    get_shortname_from_id( p->from, fromname);
+    get_shortname_from_id( p->to, toname);
+    LOG_DEBUG("SNIFFER/router enque: RX packet: from=0x%08x (%s),to=0x%08x (%s),id=0x%08x,Ch=0x%x, HopStart=%d, HopLim=%d", p->from, fromname, p->to, toname, p->id, p->channel, p->hop_start, p->hop_limit);
+#endif
     // Nasty hack because our threading is primitive.  interfaces shouldn't need to know about routers FIXME
     setReceivedMessage();
 }

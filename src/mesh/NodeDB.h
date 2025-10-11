@@ -95,6 +95,7 @@ extern meshtastic_User &owner;
 extern meshtastic_Position localPosition;
 
 extern uint16_t get_myshortname_magicnumber();
+void get_shortname_from_id(uint32_t id, char *namebuf);
 
 static constexpr const char *deviceStateFileName = "/prefs/device.proto";
 static constexpr const char *legacyPrefFileName = "/prefs/db.proto";

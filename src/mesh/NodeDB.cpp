@@ -149,6 +149,17 @@ uint32_t get_st7789_id(uint8_t cs, uint8_t sck, uint8_t mosi, uint8_t dc, uint8_
 
 #endif
 
+
+void get_shortname_from_id(uint32_t id, char *namebuf) {
+    if (id == 0xffffffff) {
+        strncpy(namebuf,"BCST",4);
+    } else {
+        auto node = nodeDB->getMeshNode(id);
+        (node) ? strncpy(namebuf, node->user.short_name, 4) : strncpy(namebuf,"????",4);
+    }
+    namebuf[4] = 0;
+}
+
 uint16_t get_myshortname_magicnumber() {
 
     uint16_t retval = 0;
