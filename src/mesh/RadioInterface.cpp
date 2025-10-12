@@ -335,9 +335,12 @@ uint32_t RadioInterface::getTxDelayMsecWeighted(float snr)
 void printPacket(const char *prefix, const meshtastic_MeshPacket *p)
 {
 #if defined(DEBUG_PORT) && !defined(DEBUG_MUTE)
+    char toname[5],fromname[5];
+    get_shortname_from_id( p->from, fromname);
+    get_shortname_from_id( p->to, toname);
     std::string out =
-        DEBUG_PORT.mt_sprintf("%s (id=0x%08x fr=0x%08x to=0x%08x, transport = %u, WantAck=%d, HopLim=%d Ch=0x%x", prefix, p->id,
-                              p->from, p->to, p->transport_mechanism, p->want_ack, p->hop_limit, p->channel);
+        DEBUG_PORT.mt_sprintf("%s (id=0x%08x fr=0x%08x (%s) to=0x%08x (%s), transport = %u, WantAck=%d, HopLim=%d Ch=0x%x", prefix, p->id,
+                              p->from, fromname, p->to, toname, p->transport_mechanism, p->want_ack, p->hop_limit, p->channel);
     if (p->which_payload_variant == meshtastic_MeshPacket_decoded_tag) {
         auto &s = p->decoded;
 

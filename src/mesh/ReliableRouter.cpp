@@ -142,7 +142,15 @@ void ReliableRouter::sniffReceived(const meshtastic_MeshPacket *p, const meshtas
             }
         }
     }
+    char toname[5],fromname[5];
+    get_shortname_from_id( p->from, fromname);
+    get_shortname_from_id( p->to, toname);
+    LOG_DEBUG("SNIFFER/Reliable::sniffReceived: from=0x%08x (%s),to=0x%08x (%s),id=0x%08x,Ch=0x%x, HopStart=%d, HopLim=%d", p->from, fromname, p->to, toname, p->id, p->channel, p->hop_start, p->hop_limit);
 
-    // handle the packet as normal
-    isBroadcast(p->to) ? FloodingRouter::sniffReceived(p, c) : NextHopRouter::sniffReceived(p, c);
+    if (p->which_payload_variant == meshtastic_MeshPacket_decoded_tag && p->decoded.portnum == meshtastic_PortNum_TRACEROUTE_APP) {
+        FloodingRouter::sniffReceived(p, c);
+    } else {
+        // handle the packet as normal
+        isBroadcast(p->to) ? FloodingRouter::sniffReceived(p, c) : NextHopRouter::sniffReceived(p, c);
+    }
 }

@@ -97,6 +97,12 @@ void FloodingRouter::perhapsRebroadcast(const meshtastic_MeshPacket *p)
 
 void FloodingRouter::sniffReceived(const meshtastic_MeshPacket *p, const meshtastic_Routing *c)
 {
+    char toname[5],fromname[5];
+    get_shortname_from_id( p->from, fromname);
+    get_shortname_from_id( p->to, toname);
+    LOG_DEBUG("SNIFFER/FloodingRouter::sniffReceived: from=0x%08x (%s),to=0x%08x (%s),id=0x%08x,Ch=0x%x, HopStart=%d, HopLim=%d", p->from, fromname, p->to, toname, p->id, p->channel, p->hop_start, p->hop_limit);
+
+
     bool isAckorReply = (p->which_payload_variant == meshtastic_MeshPacket_decoded_tag) &&
                         (p->decoded.request_id != 0 || p->decoded.reply_id != 0);
     if (isAckorReply && !isToUs(p) && !isBroadcast(p->to)) {
@@ -105,6 +111,7 @@ void FloodingRouter::sniffReceived(const meshtastic_MeshPacket *p, const meshtas
         Router::cancelSending(p->to, p->decoded.request_id); // cancel rebroadcast for this DM
     }
 
+    
     perhapsRebroadcast(p);
 
     // handle the packet as normal
