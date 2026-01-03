@@ -445,10 +445,30 @@ void RadioLibInterface::handleReceiveInterrupt()
             }
 
 #ifdef FLAMINGO
-            if (radioBuffer.header.magicnum != PACKET_HEADER_MAGIC_NUMBER) {
-                LOG_INFO("Dropping received packet for magic number mismatch");
+            uint16_t myshortnum = get_myshortname_magicnumber();
+            uint16_t reject_packet = 1;
+            LOG_INFO("MagicNumber: MyShortNum: %d, RX packet headerMagicNum: %d", myshortnum, radioBuffer.header.magicnum);
+            if (myshortnum == 12 && (radioBuffer.header.magicnum == 20 || radioBuffer.header.magicnum == 11) ) {
+                reject_packet = 0;
+            }
+            
+            if (myshortnum == 20 && (radioBuffer.header.magicnum == 12 || radioBuffer.header.magicnum == 21) ) {
+                reject_packet = 0;
+            }
+             if (myshortnum == 1 && (radioBuffer.header.magicnum == 2) ) {
+                reject_packet = 0;
+            }
+
+            if ((reject_packet) && (radioBuffer.header.magicnum == myshortnum-1 || radioBuffer.header.magicnum == myshortnum+1)) {
+                reject_packet = 0;
+            }
+            if (radioBuffer.header.magicnum ==  0) reject_packet = 1;
+
+            if (reject_packet) {
+                LOG_INFO("MagicNumber: Dropping received packet based on mismatch");
                 return;
             }
+            LOG_INFO("MagicNumber: Accepting received packet");
 #endif
 
             // Note: we deliver _all_ packets to our router (i.e. our interface is intentionally promiscuous).
