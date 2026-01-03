@@ -232,12 +232,22 @@ uint32_t RadioInterface::getPacketTime(const meshtastic_MeshPacket *p)
 /** The delay to use for retransmitting dropped packets */
 uint32_t RadioInterface::getRetransmissionMsec(const meshtastic_MeshPacket *p)
 {
-    size_t numbytes = pb_encode_to_bytes(bytes, sizeof(bytes), &meshtastic_Data_msg, &p->decoded);
+    LOG_DEBUG("Enter RadioInterface:getRetransmissionMsec");
+    bool isDecoded = p->which_payload_variant == meshtastic_MeshPacket_decoded_tag;
+    size_t numbytes = 200;   // default value in case packet is encryptd 
+    if (isDecoded) {
+        LOG_DEBUG("packet is decoded");
+        numbytes = pb_encode_to_bytes(bytes, sizeof(bytes), &meshtastic_Data_msg, &p->decoded);
+    } else {
+        LOG_DEBUG("packet is encrypted, using default packet size");
+    }
+    LOG_DEBUG("after call to pb_encode_to_bytes");
     uint32_t packetAirtime = getPacketTime(numbytes + sizeof(PacketHeader));
     // Make sure enough time has elapsed for this packet to be sent and an ACK is received.
     // LOG_DEBUG("Waiting for flooding message with airtime %d and slotTime is %d", packetAirtime, slotTimeMsec);
     float channelUtil = airTime->channelUtilizationPercent();
     uint8_t CWsize = map(channelUtil, 0, 100, CWmin, CWmax);
+    LOG_DEBUG("Enter RadioInterface:getRetransmissionMsec");
     // Assuming we pick max. of CWsize and there will be a client with SNR at half the range
     return 2 * packetAirtime + (pow(2, CWsize) + 2 * CWmax + pow(2, int((CWmax + CWmin) / 2))) * slotTimeMsec +
            PROCESSING_TIME_MSEC;

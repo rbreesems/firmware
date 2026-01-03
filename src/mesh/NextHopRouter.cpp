@@ -22,7 +22,8 @@ ErrorCode NextHopRouter::send(meshtastic_MeshPacket *p)
 
     // If it's from us, ReliableRouter already handles retransmissions if want_ack is set. If a next hop is set and hop limit is
     // not 0 or want_ack is set, start retransmissions
-    if ((!isFromUs(p) || !p->want_ack) && p->next_hop != NO_NEXT_HOP_PREFERENCE && (p->hop_limit > 0 || p->want_ack)){
+    //if ((!isFromUs(p) || !p->want_ack) && p->next_hop != NO_NEXT_HOP_PREFERENCE && (p->hop_limit > 0 || p->want_ack)){
+    if ((!isFromUs(p) || !p->want_ack) && (p->hop_limit > 0 || p->want_ack)){
         LOG_DEBUG("NextHopRtr:: Retran, Send dest: %x  next hop: %x", p->to, p->next_hop);
         startRetransmission(packetPool.allocCopy(*p)); // start retransmission for relayed packet
     }
@@ -162,6 +163,7 @@ bool NextHopRouter::stopRetransmission(NodeNum from, PacketId id)
 bool NextHopRouter::stopRetransmission(GlobalPacketId key)
 {
     auto old = findPendingPacket(key);
+    LOG_DEBUG("Enter NxtHop:stopRetransmission");
     if (old) {
         auto p = old->packet;
         /* Only when we already transmitted a packet via LoRa, we will cancel the packet in the Tx queue
@@ -179,9 +181,12 @@ bool NextHopRouter::stopRetransmission(GlobalPacketId key)
         }
         auto numErased = pending.erase(key);
         assert(numErased == 1);
+        LOG_DEBUG("ExitA NxtHop:stopRetransmission");
         return true;
-    } else
+    } else {
+        LOG_DEBUG("ExitB NxtHop:stopRetransmission");
         return false;
+    }
 }
 
 /**
@@ -191,12 +196,12 @@ PendingPacket *NextHopRouter::startRetransmission(meshtastic_MeshPacket *p, uint
 {
     auto id = GlobalPacketId(p);
     auto rec = PendingPacket(p, numReTx);
-
+    LOG_DEBUG("Enter NxtHop:startRetrans");
     stopRetransmission(getFrom(p), p->id);
 
     setNextTx(&rec);
     pending[id] = rec;
-
+    LOG_DEBUG("Exit NxtHop:startRetrans");
     return &pending[id];
 }
 
@@ -207,6 +212,8 @@ int32_t NextHopRouter::doRetransmissions()
 {
     uint32_t now = millis();
     int32_t d = INT32_MAX;
+
+    LOG_DEBUG("Enter NxtHop:Retransmissions");
 
     // FIXME, we should use a better datastructure rather than walking through this map.
     // for(auto el: pending) {
@@ -241,8 +248,10 @@ int32_t NextHopRouter::doRetransmissions()
                             LOG_INFO("Resetting next hop for packet with dest 0x%x\n", p.packet->to);
                             sentTo->next_hop = NO_NEXT_HOP_PREFERENCE;
                         }
+                        LOG_DEBUG("In NxtHop:Retran Call FloodSend");
                         FloodingRouter::send(packetPool.allocCopy(*p.packet));
                     } else {
+                        LOG_DEBUG("In NxtHop:Retran Call NxtHopSend");
                         NextHopRouter::send(packetPool.allocCopy(*p.packet));
                     }
                 } else {
@@ -264,16 +273,18 @@ int32_t NextHopRouter::doRetransmissions()
             d = min(t, d);
         }
     }
-
+    LOG_DEBUG("Exit NxtHop:Retransmissions");
     return d;
 }
 
 void NextHopRouter::setNextTx(PendingPacket *pending)
 {
-    assert(iface);
+    //assert(iface);
+    LOG_DEBUG("Enter NxtHop:setNextTx");
     auto d = iface->getRetransmissionMsec(pending->packet);
     pending->nextTxMsec = millis() + d;
     LOG_DEBUG("Setting next retransmission in %u msecs: ", d);
     printPacket("", pending->packet);
     setReceivedMessage(); // Run ASAP, so we can figure out our correct sleep time
+    LOG_DEBUG("Exit NxtHop:setNextTx");
 }
