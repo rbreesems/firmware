@@ -1,6 +1,6 @@
 #pragma once
 
-#if defined(USE_SLINK)
+#if defined(FLAMINGO) && defined(FLAMINGO_SLINK)
 
 #include "MeshModule.h"
 #include "Router.h"
@@ -54,13 +54,13 @@ class SerialModule : public StreamAPI, private concurrency::OSThread
 
   public:
     SerialModule();
+    static bool isValidConfig(const meshtastic_ModuleConfig_SerialConfig &config);
 
   protected:
     virtual int32_t runOnce() override;
 
     /// Check the current underlying physical link to see if the client is currently connected
     virtual bool checkIsConnected() override;
-
    
   private:
     uint32_t getBaudRate();
@@ -82,6 +82,7 @@ class SerialModuleRadio : public MeshModule
   public:
     SerialModuleRadio();
     void onSend(const meshtastic_MeshPacket &mp);
+    
 
 
   protected:
@@ -123,8 +124,8 @@ extern SerialModuleRadio *serialModuleRadio;
 #include <Arduino.h>
 #include <functional>
 
-#if (defined(ARCH_ESP32) || defined(ARCH_NRF52) || defined(ARCH_RP2040)) && !defined(CONFIG_IDF_TARGET_ESP32S2) &&               \
-    !defined(CONFIG_IDF_TARGET_ESP32C3)
+#if (defined(ARCH_ESP32) || defined(ARCH_NRF52) || defined(ARCH_RP2040) || defined(ARCH_STM32WL)) &&                             \
+    !defined(CONFIG_IDF_TARGET_ESP32S2) && !defined(CONFIG_IDF_TARGET_ESP32C3)
 
 class SerialModule : public StreamAPI, private concurrency::OSThread
 {
@@ -134,6 +135,8 @@ class SerialModule : public StreamAPI, private concurrency::OSThread
 
   public:
     SerialModule();
+
+    static bool isValidConfig(const meshtastic_ModuleConfig_SerialConfig &config);
 
   protected:
     virtual int32_t runOnce() override;
