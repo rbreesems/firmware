@@ -18,12 +18,20 @@ ErrorCode NextHopRouter::send(meshtastic_MeshPacket *p)
     wasSeenRecently(p);                                         // FIXME, move this to a sniffSent method
 
     p->next_hop = getNextHop(p->to, p->relay_node); // set the next hop
-    LOG_DEBUG("Setting next hop for packet with dest %x to %x", p->to, p->next_hop);
+    LOG_DEBUG("NextHopRouter Send:: Setting next hop for packet with dest %x to %x", p->to, p->next_hop);
 
     // If it's from us, ReliableRouter already handles retransmissions if want_ack is set. If a next hop is set and hop limit is
     // not 0 or want_ack is set, start retransmissions
-    if ((!isFromUs(p) || !p->want_ack) && p->next_hop != NO_NEXT_HOP_PREFERENCE && (p->hop_limit > 0 || p->want_ack))
+#ifdef FLAMINGO
+    // Don't check for known next hop
+    if ((!isFromUs(p) || !p->want_ack) &&  (p->hop_limit > 0 || p->want_ack)) {
         startRetransmission(packetPool.allocCopy(*p)); // start retransmission for relayed packet
+    }
+#else
+    if ((!isFromUs(p) || !p->want_ack) && p->next_hop != NO_NEXT_HOP_PREFERENCE && (p->hop_limit > 0 || p->want_ack)) {
+        startRetransmission(packetPool.allocCopy(*p)); // start retransmission for relayed packet
+    }
+#endif
 
     return Router::send(p);
 }
@@ -199,9 +207,7 @@ PendingPacket *NextHopRouter::startRetransmission(meshtastic_MeshPacket *p, uint
 {
     auto id = GlobalPacketId(p);
     auto rec = PendingPacket(p, numReTx);
-
     stopRetransmission(getFrom(p), p->id);
-
     setNextTx(&rec);
     pending[id] = rec;
 
@@ -282,6 +288,5 @@ void NextHopRouter::setNextTx(PendingPacket *pending)
     auto d = iface->getRetransmissionMsec(pending->packet);
     pending->nextTxMsec = millis() + d;
     LOG_DEBUG("Setting next retransmission in %u msecs: ", d);
-    printPacket("", pending->packet);
     setReceivedMessage(); // Run ASAP, so we can figure out our correct sleep time
 }

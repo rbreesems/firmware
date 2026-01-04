@@ -462,7 +462,14 @@ void RadioLibInterface::handleReceiveInterrupt()
                 reject_packet = 0;
             }
             if (radioBuffer.header.magicnum ==  0) reject_packet = 1;
-
+#ifdef FLAMINGO_REJECT_PERCENTAGE
+            // reject 25% of the packets
+            long v = random(0, 100);
+            if (v < FLAMINGO_REJECT_PERCENTAGE) {
+                LOG_INFO("MagicNumber: Force dropping packet, random reject");
+                reject_packet = 1;
+            }
+#endif
             if (reject_packet) {
                 LOG_INFO("MagicNumber: Dropping received packet based on mismatch");
                 return;
