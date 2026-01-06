@@ -269,15 +269,17 @@ uint32_t RadioInterface::getPacketTime(const meshtastic_MeshPacket *p)
 uint32_t RadioInterface::getRetransmissionMsec(const meshtastic_MeshPacket *p)
 {
     size_t numbytes =p->which_payload_variant == meshtastic_MeshPacket_decoded_tag ? 
-      pb_encode_to_bytes(bytes, sizeof(bytes), &meshtastic_Data_msg, &p->decoded) : 200;
+      pb_encode_to_bytes(bytes, sizeof(bytes), &meshtastic_Data_msg, &p->decoded) : p->encrypted.size;
     uint32_t packetAirtime = getPacketTime(numbytes + sizeof(PacketHeader));
     // Make sure enough time has elapsed for this packet to be sent and an ACK is received.
     // LOG_DEBUG("Waiting for flooding message with airtime %d and slotTime is %d", packetAirtime, slotTimeMsec);
     float channelUtil = airTime->channelUtilizationPercent();
     uint8_t CWsize = map(channelUtil, 0, 100, CWmin, CWmax);
-    // Assuming we pick max. of CWsize and there will be a client with SNR at half the range
-    return 2 * packetAirtime + (pow_of_2(CWsize) + 2 * CWmax + pow_of_2(int((CWmax + CWmin) / 2))) * slotTimeMsec +
+    uint waitTime =  2 * packetAirtime + (pow_of_2(CWsize) + 2 * CWmax + pow_of_2(int((CWmax + CWmin) / 2))) * slotTimeMsec +
            PROCESSING_TIME_MSEC;
+    LOG_DEBUG("Retransmit wait time: %d", waitTime);
+    // Assuming we pick max. of CWsize and there will be a client with SNR at half the range
+    return waitTime;
 }
 
 /** The delay to use when we want to send something */

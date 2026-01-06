@@ -3,6 +3,7 @@
 #include "FloodingRouter.h"
 #include <unordered_map>
 
+#ifndef FLAMINGO_MAX_REXMIT
 /**
  * An identifier for a globally unique message - a pair of the sending nodenum and the packet id assigned
  * to that message
@@ -26,6 +27,7 @@ struct GlobalPacketId {
     }
 };
 
+
 /**
  * A packet queued for retransmission
  */
@@ -47,6 +49,10 @@ class GlobalPacketIdHashFunction
   public:
     size_t operator()(const GlobalPacketId &p) const { return (std::hash<NodeNum>()(p.node)) ^ (std::hash<PacketId>()(p.id)); }
 };
+
+#endif
+
+
 
 /*
   Router for direct messages, which only relays if it is the next hop for a packet. The next hop is set by the current
@@ -79,7 +85,11 @@ class NextHopRouter : public FloodingRouter
         // Note: We must doRetransmissions FIRST, because it might queue up work for the base class runOnce implementation
         doRetransmissions();
 
+#ifdef FLAMINGO_MAX_REXMIT
         int32_t r = FloodingRouter::runOnce();
+#else
+        int32_t r = FloodingRouter::runOnce();
+#endif
 
         // Also after calling runOnce there might be new packets to retransmit
         auto d = doRetransmissions();
@@ -87,7 +97,11 @@ class NextHopRouter : public FloodingRouter
     }
 
     // The number of retransmissions intermediate nodes will do (actually 1 less than this)
-    constexpr static uint8_t NUM_INTERMEDIATE_RETX = 2;
+    #ifdef FLAMINGO_MAX_REXMIT
+    constexpr static uint8_t NUM_INTERMEDIATE_RETX = FLAMINGO_MAX_REXMIT+1;
+    #else
+    constexpr static uint8_t NUM_INTERMEDIATE_RETX = 3;
+    #endif
     // The number of retransmissions the original sender will do
     constexpr static uint8_t NUM_RELIABLE_RETX = 3;
 

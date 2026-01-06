@@ -22,10 +22,12 @@ ErrorCode NextHopRouter::send(meshtastic_MeshPacket *p)
 
     // If it's from us, ReliableRouter already handles retransmissions if want_ack is set. If a next hop is set and hop limit is
     // not 0 or want_ack is set, start retransmissions
-#ifdef FLAMINGO
-    // Don't check for known next hop
-    if ((!isFromUs(p) || !p->want_ack) &&  (p->hop_limit > 0 || p->want_ack)) {
-        startRetransmission(packetPool.allocCopy(*p)); // start retransmission for relayed packet
+#ifdef FLAMINGO_MAX_REXMIT
+    // Don't check for known next hop and only rxmit if max_rexmit > 0
+    if (FLAMINGO_MAX_REXMIT > 0) {
+        if ((!isFromUs(p) || !p->want_ack) &&  (p->hop_limit > 0 || p->want_ack)) {
+            startRetransmission(packetPool.allocCopy(*p)); // start retransmission for relayed packet
+        }
     }
 #else
     if ((!isFromUs(p) || !p->want_ack) && p->next_hop != NO_NEXT_HOP_PREFERENCE && (p->hop_limit > 0 || p->want_ack)) {
@@ -207,6 +209,8 @@ PendingPacket *NextHopRouter::startRetransmission(meshtastic_MeshPacket *p, uint
 {
     auto id = GlobalPacketId(p);
     auto rec = PendingPacket(p, numReTx);
+    LOG_DEBUG("NxtHop::startRetran fr=0x%x,to=0x%x,id=0x%x, tries left=%d", p->from, p->to,
+                          p->id, numReTx);
     stopRetransmission(getFrom(p), p->id);
     setNextTx(&rec);
     pending[id] = rec;
@@ -246,6 +250,7 @@ int32_t NextHopRouter::doRetransmissions()
                           p.packet->id, p.numRetransmissions);
 
                 if (!isBroadcast(p.packet->to)) {
+                    LOG_INFO("Rebroadcasting, numRetransmissions: %d\n", p.numRetransmissions);
                     if (p.numRetransmissions == 1) {
                         // Last retransmission, reset next_hop (fallback to FloodingRouter)
                         p.packet->next_hop = NO_NEXT_HOP_PREFERENCE;
@@ -255,8 +260,10 @@ int32_t NextHopRouter::doRetransmissions()
                             LOG_INFO("Resetting next hop for packet with dest 0x%x\n", p.packet->to);
                             sentTo->next_hop = NO_NEXT_HOP_PREFERENCE;
                         }
+                        LOG_INFO("Rebroadcasting with flooding router\n");
                         FloodingRouter::send(packetPool.allocCopy(*p.packet));
                     } else {
+                        LOG_INFO("Rebroadcasting with Nexthop router\n");
                         NextHopRouter::send(packetPool.allocCopy(*p.packet));
                     }
                 } else {
