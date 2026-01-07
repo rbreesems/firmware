@@ -16,8 +16,30 @@ ErrorCode FloodingRouter::send(meshtastic_MeshPacket *p)
     // Add any messages _we_ send to the seen message list (so we will ignore all retransmissions we see)
     p->relay_node = nodeDB->getLastByteOfNodeNum(getNodeNum()); // First set the relayer to us
     wasSeenRecently(p);
+
+//#ifdef FLAMINGO_MAX_REXMIT
+#if 0
+    // this is only directly called by the Reliable router when a channel message is initiated
+    // so queue a retransmit
+    if (FLAMINGO_MAX_REXMIT > 0) {
+            if ((!isFromUs(p) || !p->want_ack) &&  (p->hop_limit > 0 || p->want_ack)) {
+                startRetransmission(packetPool.allocCopy(*p)); // start retransmission for relayed packet
+            }
+    }
+#endif
     return Router::send(p);
 }
+
+#ifdef FLAMINGO_MAX_REXMIT
+ErrorCode FloodingRouter::sendNoReXmit(meshtastic_MeshPacket *p)
+{
+    
+    // Add any messages _we_ send to the seen message list (so we will ignore all retransmissions we see)
+    p->relay_node = nodeDB->getLastByteOfNodeNum(getNodeNum()); // First set the relayer to us
+    wasSeenRecently(p);
+    return Router::send(p);
+}
+#endif
 
 bool FloodingRouter::shouldFilterReceived(const meshtastic_MeshPacket *p)
 {
@@ -84,7 +106,10 @@ void FloodingRouter::perhapsRebroadcast(const meshtastic_MeshPacket *p)
 
                 LOG_INFO("Rebroadcast received floodmsg");
 #ifdef FLAMINGO_MAX_REXMIT
-                if (FLAMINGO_MAX_REXMIT > 0) {
+                // this method gets handed packets that have been seen recently and is a reliable router repeat
+                // do not add these to the retransmit queue, causes an infinite loop
+                bool isRepeated = p->hop_start > 0 && p->hop_start == p->hop_limit;
+                if (FLAMINGO_MAX_REXMIT > 0 && !isRepeated) {
                     if ((!isFromUs(p) || !p->want_ack) &&  (p->hop_limit > 0 || p->want_ack)) {
                         startRetransmission(packetPool.allocCopy(*p)); // start retransmission for relayed packet
                     }

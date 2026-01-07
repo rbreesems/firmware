@@ -120,10 +120,7 @@ class FloodingRouter : public Router
 
   protected:
     
-    /**
-     * Version of send that never adds retransmit record
-     */
-    ErrorCode sendNoReXmit(meshtastic_MeshPacket *p);
+    
 
     /**
      * Should this incoming filter be dropped?
@@ -144,6 +141,12 @@ class FloodingRouter : public Router
     // Return true if we are a rebroadcaster
     bool isRebroadcaster();
 #ifdef FLAMINGO_MAX_REXMIT
+
+    /**
+     * Version of send that never adds retransmit record
+     */
+    ErrorCode sendNoReXmit(meshtastic_MeshPacket *p);
+    
     /**
      * Pending retransmissions
      */
