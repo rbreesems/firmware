@@ -143,11 +143,6 @@ class FloodingRouter : public Router
 #ifdef FLAMINGO_MAX_REXMIT
 
     /**
-     * Version of send that never adds retransmit record
-     */
-    ErrorCode sendNoReXmit(meshtastic_MeshPacket *p);
-    
-    /**
      * Pending retransmissions
      */
     std::unordered_map<GlobalPacketId, PendingPacket, GlobalPacketIdHashFunction> pending;

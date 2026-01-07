@@ -261,26 +261,15 @@ int32_t NextHopRouter::doRetransmissions()
                             sentTo->next_hop = NO_NEXT_HOP_PREFERENCE;
                         }
                         LOG_INFO("Rebroadcasting with flooding router\n");
-#ifdef FLAMINGO_MAX_REXMIT
-                        // use version of flood send that does not do retransmit
-                        FloodingRouter::sendNoReXmit(packetPool.allocCopy(*p.packet));
-#else
                         FloodingRouter::send(packetPool.allocCopy(*p.packet));
-#endif
                     } else {
                         LOG_INFO("Rebroadcasting with Nexthop router\n");
                         NextHopRouter::send(packetPool.allocCopy(*p.packet));
                     }
                 } else {
-#ifdef FLAMINGO_MAX_REXMIT
-                    // use version of flood send that does not do retransmit
-                    FloodingRouter::sendNoReXmit(packetPool.allocCopy(*p.packet));
-#else
                     // Note: we call the superclass version because we don't want to have our version of send() add a new
                     // retransmission record
-                    FloodingRouter::send(packetPool.allocCopy(*p.packet));
-#endif
-                    
+                    FloodingRouter::send(packetPool.allocCopy(*p.packet));    
                 }
 
                 // Queue again
