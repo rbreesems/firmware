@@ -22,6 +22,8 @@
 
     This is intended for the WisMesh starter kit (19007 board+ 4630) + RS485 which uses Serial1
 
+    This module will wait not transmit over the link if the RX is currently busy.
+
 */
 
 #define TIMEOUT 250
