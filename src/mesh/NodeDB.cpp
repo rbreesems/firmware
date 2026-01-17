@@ -150,26 +150,28 @@ uint32_t get_st7789_id(uint8_t cs, uint8_t sck, uint8_t mosi, uint8_t dc, uint8_
 #endif
 
 #ifdef FLAMINGO_HOP_DEBUG
-void get_shortname_from_id(uint32_t id, char *namebuf) {
+void get_shortname_from_id(uint32_t id, char *namebuf)
+{
     if (id == 0xffffffff) {
-        strncpy(namebuf,"BCST",4);
+        strncpy(namebuf, "BCST", 4);
     } else {
         auto node = nodeDB->getMeshNode(id);
-        (node) ? strncpy(namebuf, node->user.short_name, 4) : strncpy(namebuf,"????",4);
+        (node) ? strncpy(namebuf, node->user.short_name, 4) : strncpy(namebuf, "????", 4);
     }
     namebuf[4] = 0;
 }
 
-uint16_t get_myshortname_magicnumber() {
+uint16_t get_myshortname_magicnumber()
+{
 
     uint16_t retval = 0;
     auto node = nodeDB->getMeshNode(myNodeInfo.my_node_num);
     const char *sender = (node) ? node->user.short_name : "????";
 
-    if ( sender[2] >= 0x30 && sender[2]  <= 0x39) {
+    if (sender[2] >= 0x30 && sender[2] <= 0x39) {
         retval = (sender[2] - 0x30) * 10;
     }
-    if ( sender[3] >= 0x30 && sender[3]  <= 0x39) {
+    if (sender[3] >= 0x30 && sender[3] <= 0x39) {
         retval += (sender[3] - 0x30);
     }
     return retval;
@@ -691,7 +693,8 @@ void NodeDB::installDefaultConfig(bool preserveKey = false)
     config.bluetooth.fixed_pin = defaultBLEPin;
 
 #if defined(ST7735_CS) || defined(USE_EINK) || defined(ILI9341_DRIVER) || defined(ILI9342_DRIVER) || defined(ST7789_CS) ||       \
-    defined(HX8357_CS) || defined(USE_ST7789) || defined(ILI9488_CS) || defined(ST7796_CS) || defined(USE_SPISSD1306) || defined(USE_ST7796)
+    defined(HX8357_CS) || defined(USE_ST7789) || defined(ILI9488_CS) || defined(ST7796_CS) || defined(USE_SPISSD1306) ||         \
+    defined(USE_ST7796)
     bool hasScreen = true;
 #ifdef HELTEC_MESH_NODE_T114
     uint32_t st7789_id = get_st7789_id(ST7789_NSS, ST7789_SCK, ST7789_SDA, ST7789_RS, ST7789_RESET);

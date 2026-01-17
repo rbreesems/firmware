@@ -25,8 +25,7 @@ PacketCacheEntry *PacketCache::cache(const meshtastic_MeshPacket *p, bool preser
     e->header.next_hop = p->next_hop;
     e->header.relay_node = p->relay_node;
 #ifdef FLAMINGO
-    e->header.flags =
-        0x20 | (p->want_ack ? PACKET_FLAGS_WANT_ACK_MASK : 0) | (p->via_mqtt ? PACKET_FLAGS_VIA_MQTT_MASK : 0);
+    e->header.flags = 0x20 | (p->want_ack ? PACKET_FLAGS_WANT_ACK_MASK : 0) | (p->via_mqtt ? PACKET_FLAGS_VIA_MQTT_MASK : 0);
 
     e->header.hop_limit = p->hop_limit & PACKET_FLAGS_HOP_LIMIT_MASK;
     e->header.hop_start = p->hop_start & PACKET_FLAGS_HOP_START_MASK;
@@ -181,8 +180,8 @@ void PacketCache::rehydrate(const PacketCacheEntry *e, meshtastic_MeshPacket *p)
     p->next_hop = e->header.next_hop;
     p->relay_node = e->header.relay_node;
 #ifdef FLAMINGO
-    p->hop_limit = e->header.hop_limit & PACKET_FLAGS_HOP_LIMIT_MASK ;
-    p->hop_start = e->header.hop_start & PACKET_FLAGS_HOP_START_MASK ;
+    p->hop_limit = e->header.hop_limit & PACKET_FLAGS_HOP_LIMIT_MASK;
+    p->hop_start = e->header.hop_start & PACKET_FLAGS_HOP_START_MASK;
 #else
     p->hop_limit = e->header.flags & PACKET_FLAGS_HOP_LIMIT_MASK;
     p->hop_start = (e->header.flags & PACKET_FLAGS_HOP_START_MASK) >> PACKET_FLAGS_HOP_START_SHIFT;

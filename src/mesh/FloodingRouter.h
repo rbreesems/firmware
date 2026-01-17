@@ -107,7 +107,7 @@ class FloodingRouter : public Router
     // The number of retransmissions the original sender will do
     constexpr static uint8_t NUM_RELIABLE_RETX = 3;
 
-private:
+  private:
     /* Check if we should rebroadcast this packet, and do so if needed */
     void perhapsRebroadcast(const meshtastic_MeshPacket *p);
 #endif
@@ -130,7 +130,6 @@ private:
     /* Check if we should rebroadcast this packet, and do so if needed */
     virtual bool perhapsRebroadcast(const meshtastic_MeshPacket *p) = 0;
 #endif
-
 
     /* Check if we should handle an upgraded packet (with higher hop_limit)
      * @return true if we handled it (so stop processing)

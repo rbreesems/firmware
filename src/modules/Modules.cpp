@@ -130,7 +130,6 @@
 #include "modules/DropzoneModule.h"
 #endif
 
-
 /**
  * Create module instances here.  If you are adding a new module, you must 'new' it here (or somewhere else)
  */
@@ -296,17 +295,16 @@ void setupModules()
 #if (defined(ARCH_ESP32) || defined(ARCH_NRF52) || defined(ARCH_RP2040) || defined(ARCH_STM32WL)) &&                             \
     !defined(CONFIG_IDF_TARGET_ESP32S2) && !defined(CONFIG_IDF_TARGET_ESP32C3)
 
-
 #ifdef FLAMINGO
 #ifdef FLAMINGO_BUZZER
-        buzzerModule = new BuzzerModule();
+    buzzerModule = new BuzzerModule();
 #endif
 #ifdef FLAMINGO_BLINKY
-        blinkModule = new BlinkModule();
+    blinkModule = new BlinkModule();
 #endif
 
 #ifdef FLAMINGO_SLINK
-        new SerialModule();
+    new SerialModule();
 #endif
 
 #else
@@ -343,8 +341,8 @@ void setupModules()
 
 #ifdef FLAMINGO
 #if !MESHTASTIC_EXCLUDE_RANGETEST
-        if (moduleConfig.has_range_test && moduleConfig.range_test.enabled)
-            new RangeTestModule();
+    if (moduleConfig.has_range_test && moduleConfig.range_test.enabled)
+        new RangeTestModule();
 #endif
 #else
 #if !MESHTASTIC_EXCLUDE_RANGETEST && !MESHTASTIC_EXCLUDE_GPS

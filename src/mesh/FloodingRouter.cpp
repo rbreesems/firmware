@@ -152,7 +152,7 @@ void FloodingRouter::perhapsRebroadcast(const meshtastic_MeshPacket *p)
 
                 LOG_INFO("Rebroadcast received floodmsg");
                 if (FLAMINGO_MAX_REXMIT > 0) {
-                    if ((!isFromUs(p) || !p->want_ack) &&  (p->hop_limit > 0 || p->want_ack)) {
+                    if ((!isFromUs(p) || !p->want_ack) && (p->hop_limit > 0 || p->want_ack)) {
                         meshtastic_MeshPacket *toxmit = packetPool.allocCopy(*p);
                         toxmit->hop_limit--; // bump down the hop count
                         toxmit->next_hop = NO_NEXT_HOP_PREFERENCE;
@@ -276,8 +276,8 @@ int32_t FloodingRouter::doRetransmissions()
                 stopRetransmission(it->first);
                 stillValid = false; // just deleted it
             } else {
-                LOG_DEBUG("Flooding Router: Sending retransmission fr=0x%x,to=0x%x,id=0x%x, tries left=%d", p.packet->from, p.packet->to,
-                          p.packet->id, p.numRetransmissions);
+                LOG_DEBUG("Flooding Router: Sending retransmission fr=0x%x,to=0x%x,id=0x%x, tries left=%d", p.packet->from,
+                          p.packet->to, p.packet->id, p.numRetransmissions);
                 Router::send(packetPool.allocCopy(*p.packet));
                 // Queue again
                 --p.numRetransmissions;

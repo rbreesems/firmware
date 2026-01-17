@@ -9,7 +9,7 @@
 #ifdef FLAMINGO
 extern float RangeTestGetSnrAverage();
 extern bool RangeTestIsValidSnrAverage();
-#endif 
+#endif
 
 class RangeTestModule : private concurrency::OSThread
 {
@@ -17,7 +17,7 @@ class RangeTestModule : private concurrency::OSThread
     unsigned long started = 0;
 #ifdef FLAMINGO
     uint8_t lastRtEnable = 0;
-#endif 
+#endif
 
   public:
     RangeTestModule();
