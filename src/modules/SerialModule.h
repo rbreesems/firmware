@@ -3,12 +3,15 @@
 #if defined(FLAMINGO) && defined(FLAMINGO_SLINK)
 
 #include "MeshModule.h"
+#include "MeshPacketQueue.h"
 #include "Router.h"
 #include "SinglePortModule.h"
 #include "concurrency/OSThread.h"
 #include "configuration.h"
 #include <Arduino.h>
 #include <functional>
+
+#define MAX_TX_SERIAL_QUEUE 8
 
 #if (defined(ARCH_ESP32) || defined(ARCH_NRF52) || defined(ARCH_RP2040)) && !defined(CONFIG_IDF_TARGET_ESP32S2) &&               \
     !defined(CONFIG_IDF_TARGET_ESP32C3)
@@ -47,6 +50,7 @@ class SerialModule : public StreamAPI, private concurrency::OSThread
     bool firstTime = 1;
     unsigned long lastNmeaTime = millis();
     char outbuf[90] = "";
+    int lastBufferCount = 0;
 
   public:
     SerialModule();
@@ -71,10 +75,13 @@ extern SerialModule *serialModule;
 class SerialModuleRadio : public MeshModule
 {
     uint32_t lastRxID = 0;
+    uint16_t txDrop = 0;
+    MeshPacketQueue txQueue = MeshPacketQueue(MAX_TX_SERIAL_QUEUE);
 
   public:
     SerialModuleRadio();
-    void onSend(const meshtastic_MeshPacket &mp);
+    void onSend(meshtastic_MeshPacket *p);
+    void checkTxQueue();
 
   protected:
     virtual meshtastic_MeshPacket *allocReply() override;
@@ -99,6 +106,9 @@ class SerialModuleRadio : public MeshModule
 
         return p;
     }
+
+  private:
+    void sendPacketOverSerial(meshtastic_MeshPacket *p);
 };
 
 extern SerialModuleRadio *serialModuleRadio;

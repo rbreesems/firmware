@@ -68,28 +68,28 @@ uint32_t computeCrc32(const uint8_t *buf, uint16_t len)
     return ~crc; // Return the final CRC value
 }
 
-void meshPacketToSerialPacket(const meshtastic_MeshPacket &mp, meshtastic_serialPacket *sp)
+void meshPacketToSerialPacket(meshtastic_MeshPacket *p, meshtastic_serialPacket *sp)
 {
     sp->header.hbyte1 = headerByte1;
     sp->header.hbyte2 = headerByte2;
     sp->header.crc = 0;
 
-    if (mp.which_payload_variant == meshtastic_MeshPacket_encrypted_tag) {
-        sp->header.size = sizeof(SerialPacketHeader) + mp.encrypted.size;
-        memcpy(sp->payload, mp.encrypted.bytes, mp.encrypted.size);
+    if (p->which_payload_variant == meshtastic_MeshPacket_encrypted_tag) {
+        sp->header.size = sizeof(SerialPacketHeader) + p->encrypted.size;
+        memcpy(sp->payload, p->encrypted.bytes, p->encrypted.size);
     } else {
-        sp->header.size = sizeof(SerialPacketHeader) + mp.decoded.payload.size;
-        memcpy(sp->payload, mp.decoded.payload.bytes, mp.decoded.payload.size);
+        sp->header.size = sizeof(SerialPacketHeader) + p->decoded.payload.size;
+        memcpy(sp->payload, p->decoded.payload.bytes, p->decoded.payload.size);
     }
-    sp->header.from = mp.from;
-    sp->header.to = mp.to;
-    sp->header.id = mp.id;
-    sp->header.channel = mp.channel;
+    sp->header.from = p->from;
+    sp->header.to = p->to;
+    sp->header.id = p->id;
+    sp->header.channel = p->channel;
 
-    sp->header.hop_limit = mp.hop_limit & PACKET_FLAGS_HOP_LIMIT_MASK;
-    sp->header.hop_start = mp.hop_start & PACKET_FLAGS_HOP_START_MASK;
-    sp->header.flags = 0x20 | (mp.want_ack ? PACKET_FLAGS_WANT_ACK_MASK : 0) |
-                       ((mp.which_payload_variant == meshtastic_MeshPacket_encrypted_tag) ? PACKET_FLAGS_ENCRYPTED_MASK : 0);
+    sp->header.hop_limit = p->hop_limit & PACKET_FLAGS_HOP_LIMIT_MASK;
+    sp->header.hop_start = p->hop_start & PACKET_FLAGS_HOP_START_MASK;
+    sp->header.flags = 0x20 | (p->want_ack ? PACKET_FLAGS_WANT_ACK_MASK : 0) |
+                       ((p->which_payload_variant == meshtastic_MeshPacket_encrypted_tag) ? PACKET_FLAGS_ENCRYPTED_MASK : 0);
 
     sp->header.crc = computeCrc32((const uint8_t *)sp, sp->header.size);
 }
@@ -196,16 +196,29 @@ int32_t SerialModule::runOnce()
         serialModuleRadio = new SerialModuleRadio();
         firstTime = 0;
     } else {
-        // stream.cpp/readBytes  arduinofruit library
-        while (Serial1.available()) {
-            serialPayloadSize = Serial1.readBytes((uint8_t *)&inPacket, sizeof(meshtastic_serialPacket));
-            if (!checkIfValidPacket(&inPacket)) {
-                LOG_DEBUG("Serial Module failed CRC on RX");
+        int currentBufferCount = Serial1.available();
+        if (currentBufferCount) {
+            // data in the buffer.
+            if (lastBufferCount != currentBufferCount) {
+                // we have data, will wait until next poll to read it
+                // in case more data arrives
+                lastBufferCount = currentBufferCount;
             } else {
-                // checks passed, pass this packet on
-                LOG_DEBUG("Serial Module RX Insert packet to mesh");
-                insertSerialPacketToMesh(&inPacket);
+                // no data arrived since last poll, read this data
+                // read one packet
+                // stream.cpp/readBytes  arduinofruit library
+                serialPayloadSize = Serial1.readBytes((uint8_t *)&inPacket, sizeof(meshtastic_serialPacket));
+                if (!checkIfValidPacket(&inPacket)) {
+                    LOG_DEBUG("Serial Module failed CRC on RX, numbytes: %d", serialPayloadSize);
+                } else {
+                    // checks passed, pass this packet on
+                    LOG_DEBUG("Serial Module RX insert packet to mesh, numbytes: %d", serialPayloadSize);
+                    insertSerialPacketToMesh(&inPacket);
+                }
+                lastBufferCount = 0; // zero out the lastBuffer count
             }
+        } else {
+            serialModuleRadio->checkTxQueue();
         }
     }
     return (50);
@@ -250,15 +263,9 @@ bool SerialModuleRadio::wantPacket(const meshtastic_MeshPacket *p)
     return false;
 }
 
-/*
- Called from Router.cpp/Router::send
- Send this over the link
-*/
-void SerialModuleRadio::onSend(const meshtastic_MeshPacket &mp)
+void SerialModuleRadio::sendPacketOverSerial(meshtastic_MeshPacket *p)
 {
-
-    LOG_DEBUG("Serial Module Onsend TX   from=0x%0x, to=0x%0x, packet_id=0x%0x", mp.from, mp.to, mp.id);
-    meshPacketToSerialPacket(mp, &outPacket);
+    meshPacketToSerialPacket(p, &outPacket);
     // debug check
     if (!checkIfValidPacket(&outPacket)) {
         LOG_DEBUG("Serial Module failed CRC on TX");
@@ -268,6 +275,53 @@ void SerialModuleRadio::onSend(const meshtastic_MeshPacket &mp)
             Serial1.write((uint8_t *)&outPacket, outPacket.header.size);
         }
     }
+}
+
+void SerialModuleRadio::checkTxQueue()
+{
+    if (txQueue.empty())
+        return; // nothing to do
+    meshtastic_MeshPacket *p = txQueue.dequeue();
+    LOG_DEBUG("Serial Module Onsend pulled packet from txQueue   from=0x%0x, to=0x%0x, packet_id=0x%0x", p->from, p->to, p->id);
+    LOG_DEBUG("Serial Module num in txQueue: %d", txQueue.getMaxLen() - txQueue.getFree());
+    sendPacketOverSerial(p);
+    // free this packet
+    packetPool.release(p);
+}
+
+/*
+ Called from Router.cpp/Router::send
+ Send this over the link
+*/
+void SerialModuleRadio::onSend(meshtastic_MeshPacket *p)
+{
+
+    LOG_DEBUG("Serial Module Onsend TX   from=0x%0x, to=0x%0x, packet_id=0x%0x", p->from, p->to, p->id);
+#ifndef FLAMINGO_DISABLE_SERIAL_TX_QUEUE
+    // check if RX buffer has data
+    if (Serial1.peek() != -1) {
+        // there is data in the buffer, could be that RX is active
+        // copy the packet. Need to enqueue
+        bool dropped = false;
+        meshtastic_MeshPacket *tosend = packetPool.allocCopy(*p);
+        ErrorCode res = txQueue.enqueue(tosend, &dropped) ? ERRNO_OK : ERRNO_UNKNOWN;
+
+        if (dropped) {
+            txDrop++;
+            LOG_DEBUG("Serial Module new drop, total dropped packets in txQueue: %d", txDrop);
+        }
+        if (res != ERRNO_OK) {
+            // we weren't able to queue it, so we must drop it to prevent leaks
+            // this packet was not sent
+            LOG_DEBUG("Serial Module unable to send packet, txQueue error");
+            packetPool.release(tosend);
+        } else {
+            LOG_DEBUG("Serial Module added packet to txQueue, num in txQueue: %d", txQueue.getMaxLen() - txQueue.getFree());
+        }
+        return;
+    }
+#endif
+    sendPacketOverSerial(p);
 }
 
 /**
