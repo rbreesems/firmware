@@ -73,7 +73,9 @@ void parseAdmin(pb_size_t size, char *payload)
 }
 
 #ifdef DEBUG_PORT
-char textmsg[201];
+#define EMOJI_BUFF_SIZE 400
+static char emoji_buf[EMOJI_BUFF_SIZE];
+static char textmsg[300];
 #endif
 
 #endif
@@ -92,18 +94,18 @@ ProcessMessage TextMessageModule::handleReceived(const meshtastic_MeshPacket &mp
     LOG_INFO("TextModule msg: from=0x%0x, id=0x%x, ln=%s, rxSNR=%g, hop_limit=%d, hop_start=%d", mp.from, mp.id,
              n->user.long_name, mp.rx_snr, mp.hop_limit, mp.hop_start);
     uint16_t offset;
-    uint16_t bytes_left = p.payload.size;
     bool do_loop = 1;
     offset = 0;
+    uint16_t bytes_left = handleEmoji((char *)p.payload.bytes, emoji_buf, p.payload.size);
     /* apparently, the maximum size log message is about 150 characters. Deal this with this*/
     while (do_loop) {
         if (bytes_left <= 150) {
-            memset(textmsg, 0, sizeof(textmsg));
-            strncpy(textmsg, (char *)(p.payload.bytes + offset), bytes_left);
+            memset(textmsg, 0, bytes_left + 1);
+            strncpy(textmsg, (char *)(emoji_buf + offset), bytes_left);
             do_loop = 0;
         } else {
-            memset(textmsg, 0, sizeof(textmsg));
-            strncpy(textmsg, (char *)(p.payload.bytes + offset), 150);
+            memset(textmsg, 0, 150 + 1);
+            strncpy(textmsg, (char *)(emoji_buf + offset), 150);
             offset = offset + 150;
             bytes_left = bytes_left - 150;
         }
@@ -139,4 +141,50 @@ ProcessMessage TextMessageModule::handleReceived(const meshtastic_MeshPacket &mp
 bool TextMessageModule::wantPacket(const meshtastic_MeshPacket *p)
 {
     return MeshService::isTextPayload(p);
+}
+
+/**
+ *   Copies inbuf buffer to outbuf buffer and converts
+ *   emojis to form :??##@@: where ??,##,@@ are the hex
+ *   for the 2nd, 3rd, 4th emoji bytes (21-bit code point)
+ *   or the 1st, 2nd, 3rd emoji bytes (16-bit code code)
+ *   Since emoji encoding expands the output buffer, there is
+ *   chance if payload has many, many emojis that we could
+ *   expand past the available space - so the function checks
+ *   for this and halts emoji processing if there is not available
+ *   space.
+ *
+ *
+ **/
+
+uint16_t TextMessageModule::handleEmoji(char *inbuf, char *outbuf, uint16_t numbytes)
+{
+    uint16_t i = 0; // index in source buffer
+    uint16_t v = 0; // index in dest buffer
+    uint32_t emoji_value;
+    char tbuf[20];
+
+    // Emoji content transformation will expand the number of bytes
+    // in the buffer. We stop processing if we are in dange of overflow
+
+    while (i < numbytes && v < EMOJI_BUFF_SIZE - 8) {
+        if ((inbuf[i] & 0xf8) == 0xf0) { // 21-bit Unicode code points, encoded as 4 bytes
+            emoji_value = (inbuf[i + 1] << 16) + (inbuf[i + 2] << 8) + inbuf[i + 3];
+            sprintf(tbuf, ":%06x:", emoji_value);
+            strcpy(outbuf + v, tbuf);
+            v = v + 8;                          // :000000:   == 8 characters
+            i = i + 4;                          // skip the four emoji bytes
+        } else if ((inbuf[i] & 0xe0) == 0xe0) { /// 16-bit Unicode code points, encoded as 3 bytes
+            emoji_value = (inbuf[i] << 16) + (inbuf[i + 1] << 8) + inbuf[i + 2];
+            sprintf(tbuf, ":%06x:", emoji_value);
+            strcpy(outbuf + v, tbuf);
+            v = v + 8; // :000000:   == 8 characters
+            i = i + 3; // skip the three emjoi bytes
+        } else {
+            outbuf[v] = inbuf[i];
+            v++;
+            i++;
+        }
+    }
+    return v; // number of bytes in dest buffer
 }
