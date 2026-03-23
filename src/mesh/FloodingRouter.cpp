@@ -30,6 +30,14 @@ bool FloodingRouter::shouldFilterReceived(const meshtastic_MeshPacket *p)
     bool seenRecently =
         wasSeenRecently(p, true, nullptr, nullptr, &wasUpgraded); // Updates history; returns false when an upgrade is detected
 
+#ifdef FLAMINGO_MAX_REXMIT
+    if (seenRecently) {
+        LOG_DEBUG("FloodRtr::shouldFilterReceived, seen recently, stopping retransmit  fr=0x%x,to=0x%x,id=0x%x, tries left=%d",
+                  p->from, p->to, p->id);
+        stopRetransmission(p->from, p->id);
+    }
+#endif
+
     // Handle hop_limit upgrade scenario for rebroadcasters
     if (wasUpgraded && perhapsHandleUpgradedPacket(p)) {
         return true; // we handled it, so stop processing

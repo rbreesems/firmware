@@ -478,25 +478,22 @@ void RadioLibInterface::handleReceiveInterrupt()
 #ifdef FLAMINGO
 #ifdef FLAMINGO_HOP_DEBUG
             uint16_t myshortnum = get_myshortname_magicnumber();
+
+            if (myshortnum == 0xFFFF) {
+                LOG_INFO("MagicNumber: Dropping received packet as this node is not in the Node neighbor list");
+            }
             uint16_t reject_packet = 1;
             LOG_INFO("MagicNumber: MyShortNum: %d, RX packet headerMagicNum: %d", myshortnum, radioBuffer.header.magicnum);
-            if (myshortnum == 12 && (radioBuffer.header.magicnum == 20 || radioBuffer.header.magicnum == 11)) {
+            // edge cases, first and last nodes
+            if ((myshortnum == 0 && radioBuffer.header.magicnum == get_right_neighbor()) ||
+                (myshortnum == get_max_neighbor() && radioBuffer.header.magicnum == get_left_neighbor())) {
                 reject_packet = 0;
             }
-
-            if (myshortnum == 20 && (radioBuffer.header.magicnum == 12 || radioBuffer.header.magicnum == 21)) {
+            // middle nodes
+            if (reject_packet &&
+                (radioBuffer.header.magicnum == get_right_neighbor() || radioBuffer.header.magicnum == get_left_neighbor())) {
                 reject_packet = 0;
             }
-            if (myshortnum == 1 && (radioBuffer.header.magicnum == 2)) {
-                reject_packet = 0;
-            }
-
-            if ((reject_packet) &&
-                (radioBuffer.header.magicnum == myshortnum - 1 || radioBuffer.header.magicnum == myshortnum + 1)) {
-                reject_packet = 0;
-            }
-            if (radioBuffer.header.magicnum == 0)
-                reject_packet = 1;
             if (reject_packet) {
                 LOG_INFO("MagicNumber: Dropping received packet based on mismatch");
                 return;
