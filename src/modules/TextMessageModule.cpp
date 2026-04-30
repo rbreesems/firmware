@@ -17,7 +17,7 @@ TextMessageModule *textMessageModule;
 #ifdef FLAMINGO
 #define MAX_ADMIN_MSG 31
 
-void parseAdmin(pb_size_t size, char *payload)
+void parseAdmin(pb_size_t size, char *payload, bool is_dm)
 {
     char local_payload[MAX_ADMIN_MSG + 1];
     pb_size_t new_size;
@@ -25,7 +25,8 @@ void parseAdmin(pb_size_t size, char *payload)
         return; // too short to be an ADMIN message
 
     // Check for Alert Bell emojii, toggle RT if alert bell received
-    if (payload[0] == 0xF0 && payload[1] == 0x9F && payload[2] == 0x94 && payload[3] == 0x94) {
+    /// use alert bell only if it is a dm
+    if (is_dm && payload[0] == 0xF0 && payload[1] == 0x9F && payload[2] == 0x94 && payload[3] == 0x94) {
         if (getRtDynanmicEnable()) {
             LOG_INFO("Found Alert Bell, Dynamic Rangetest OFF ");
             setRtDynamicEnable(0);
@@ -39,6 +40,12 @@ void parseAdmin(pb_size_t size, char *payload)
     if (!((payload[0] == 'A' || payload[0] == 'a') && (payload[1] == 'D' || payload[1] == 'd')))
         return;
     // this is an ADMIN message
+    char adminBuf[MAX_ADMIN_MSG + 1] = "adrt on xxxx"; // targeted to specific node
+    auto node = nodeDB->getMeshNode(myNodeInfo.my_node_num);
+    const char *sender = (node) ? node->user.short_name : "????";
+    for (int i = 0; i < 4; i++) {
+        adminBuf[i + 8] = tolower(sender[i]);
+    }
     new_size = (size < MAX_ADMIN_MSG) ? size : MAX_ADMIN_MSG;
     strncpy(local_payload, payload, new_size);
     local_payload[new_size] = '\0';
@@ -47,10 +54,10 @@ void parseAdmin(pb_size_t size, char *payload)
         local_payload[i] = tolower(local_payload[i]);
     }
 
-    if (strcmp("adrt on hop", local_payload) == 0) {
-        LOG_INFO("Turning Dynamic Rangetest ON with hop");
+    if (strcmp(adminBuf, local_payload) == 0) {
+        LOG_INFO("Turning Dynamic Rangetest ON targeted at node: %s", sender);
         setRtDynamicEnable(1);
-        setRtHop(1);
+        setRtHop(0);
     } else if (strcmp("adrt on", local_payload) == 0) {
         LOG_INFO("Turning Dynamic Rangetest ON");
         setRtDynamicEnable(1);
@@ -111,10 +118,7 @@ ProcessMessage TextMessageModule::handleReceived(const meshtastic_MeshPacket &mp
         }
         LOG_INFO("z=%s", textmsg);
     }
-    if (!isBroadcast(mp.to)) {
-        // Direct message, check if admin
-        parseAdmin(p.payload.size, (char *)p.payload.bytes);
-    }
+    parseAdmin(p.payload.size, (char *)p.payload.bytes, !isBroadcast(mp.to));
 
 #endif
 #else
