@@ -20,6 +20,7 @@
 #include "gps/GeoCoord.h"
 #include <Arduino.h>
 #include <Throttle.h>
+#include <Wire.h>
 
 BlinkModule *blinkModule;
 
@@ -42,6 +43,10 @@ static uint8_t fsmState = STATE_DEFAULT;
 int32_t BlinkModule::runOnce()
 {
     if (!initDone) {
+#if BLINK_PIN == 13 || BLINK_PIN == 14
+        // using an I2C pin, need to disable the I2C module
+        Wire.end();
+#endif
         pinMode(BLINK_PIN, OUTPUT);
         digitalWrite(BLINK_PIN, BLINK_OFF);
         fsmState = STATE_DEFAULT;
@@ -59,7 +64,6 @@ int32_t BlinkModule::runOnce()
        Blink number is the number of Blinks that will be done
        Blink pause is the pause in seconds between Blinks
        */
-
     switch (fsmState) {
     case STATE_DEFAULT:
         if (currentBlink != 0) {
