@@ -18,6 +18,9 @@
 #include "gps/GeoCoord.h"
 #include <Arduino.h>
 #include <Throttle.h>
+#if !defined(ARCH_ESP32) && !defined(ARCH_RP2040) && !defined(ARCH_PORTDUINO)
+#include "Tone.h"
+#endif
 
 BuzzerModule *buzzerModule;
 
@@ -38,6 +41,10 @@ uint8_t fsmState = STATE_DEFAULT;
 int32_t BuzzerModule::runOnce()
 {
     if (!initDone) {
+#if BUZZER_PIN == 13 || BUZZER_PIN == 14
+        // using an I2C pin, need to disable the I2C module
+        Wire.end();
+#endif
         pinMode(BUZZER_PIN, OUTPUT);
         digitalWrite(BUZZER_PIN, BUZZER_OFF);
         initDone = 1;
@@ -45,23 +52,21 @@ int32_t BuzzerModule::runOnce()
 
     unsigned long now = millis();
 
-#if 0
+#ifdef FLAMINGO_BUZZER_PASSIVE
     if (currentTone != 0) {
-        pinMode(BUZZER_PIN, OUTPUT);
-        LOG_INFO("Buzzer, starting tone");
-        unsigned long stop = now + 3000;
-        while (millis() < stop) {
-            delayMicroseconds(1000);
-            digitalWrite(BUZZER_PIN, BUZZER_ON);
-            delayMicroseconds(1000);
+        for (int i = 0; i < toneNumber; i++) {
+            tone(BUZZER_PIN, 165, toneDurationMSecs);
+            // to distinguish the notes, set a minimum time between them.
             digitalWrite(BUZZER_PIN, BUZZER_OFF);
+            delay(tonePauseMSecs);
         }
-        currentTone = 0;
         LOG_INFO("Buzzer, stopped tone");
+        fsmState == STATE_DEFAULT;
+        toneNumber = 0;
+        currentTone = 0;
     }
-#endif
-
-#if 1
+    digitalWrite(BUZZER_PIN, BUZZER_OFF);
+#else
     /*
        This is for an active buzzer
        currentTone is either 0 or non-zero
